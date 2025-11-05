@@ -2,12 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pipe-mania</title>
+
+    <title>Pipe Mania</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Optional: preload font or assets -->
+    <!-- <link rel="preload" href="/assets/font.woff2" as="font" type="font/woff2" crossorigin> -->
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        background: #111;
+        overflow: hidden;
+        font-family: sans-serif;
+      }
+
+      #app {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      canvas {
+        display: block;
+        image-rendering: pixelated; /* optional, for retro feel */
+      }
+    </style>
   </head>
+
   <body>
     <div id="app"></div>
+
+    <!-- Vite injects your TS entry automatically -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
