@@ -1,18 +1,29 @@
-import "./style.css";
 import { Game } from "./core/Game";
 import { Logger } from "./utils/Logger";
 
 
-window.addEventListener("DOMContentLoaded", () => {
-  // Setup logging system
+/**
+ * Application entry point.
+ * Initializes the logging system and bootstraps the game.
+ */
+function initializeApplication(): void {
   const logLevel = import.meta.env.VITE_LOG_LEVEL ?? "info";
   const logger = new Logger(logLevel);
 
-  // Create and start the game
-  const game = new Game(logger);
-  game.start();
+  try {
+    const game = new Game(logger);
+    game.start();
 
-  // Optional debug bindings
-  (window as any).game = game;
-  logger.info("Game initialized and started");
-});
+    // Expose game instance for debugging in development
+    if (import.meta.env.DEV) {
+      (window as any).game = game;
+    }
+
+    logger.info("Application initialized successfully");
+  } catch (error) {
+    logger.error("Failed to initialize application", error);
+    throw error;
+  }
+}
+
+window.addEventListener("DOMContentLoaded", initializeApplication);

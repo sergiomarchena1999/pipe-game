@@ -1,85 +1,92 @@
-import type { Logger } from "../utils/Logger";
-import { Pipe, PipeType } from "./Pipe";
+import { EventEmitter } from "eventemitter3";
 import { Grid } from "./Grid";
+import type { Logger } from "../utils/Logger";
+
+interface GameStateEvents {
+  initialized: [Grid];
+  stopped: [];
+}
 
 /**
- * Represents the current logical state of the game.
- * Holds the grid, level data, score, and progression state.
+ * Central state manager for the game.
+ * Emits events for state changes that other systems can subscribe to.
+ * Maintains separation between game logic and rendering.
  */
-export class GameState {
-  readonly grid: Grid;
-  private readonly logger: Logger;
+export class GameState extends EventEmitter<GameStateEvents> {
+  private _grid: Grid | null = null;
+  private isInitialized: boolean = false;
 
-  private score: number = 0;
-  private isRunning: boolean = false;
-
-  constructor(gridWidth: number, gridHeight: number, logger: Logger) {
-    this.logger = logger;
-    this.grid = new Grid(gridWidth, gridHeight, logger);
-    this.logger.info(`GameState initialized (${gridWidth}x${gridHeight})`);
+  constructor(
+    private readonly gridWidth: number,
+    private readonly gridHeight: number,
+    public readonly logger: Logger
+  ) {
+    super();
+    this.validateDimensions();
   }
 
   /**
-   * Starts a new level or resumes gameplay.
+   * Gets the game grid.
+   * @throws {Error} if accessed before initialization
+   */
+  get grid(): Grid {
+    if (!this._grid) {
+      throw new Error("GameState not initialized. Call start() first.");
+    }
+    return this._grid;
+  }
+
+  /**
+   * Initializes the game state and creates the grid.
+   * @throws {Error} if already initialized or if grid creation fails
    */
   start(): void {
-    this.isRunning = true;
-    this.logger.info("Game started");
+    if (this.isInitialized) {
+      throw new Error("GameState already initialized");
+    }
 
-    const cell = this.grid.getRandomEmptyCell();
-    if (cell) {
-      const startPipe = new Pipe(PipeType.Start, 0);
-      this.grid.placePipe(cell.x, cell.y, startPipe);
-      this.logger.info(`Start pipe placed at (${cell.x}, ${cell.y})`);
+    try {
+      this._grid = new Grid(this.gridWidth, this.gridHeight, this.logger);
+      this._grid.initialize();
+      this.isInitialized = true;
+      
+      this.logger.info("GameState started successfully");
+    } catch (error) {
+      this.logger.error("Failed to start GameState", error);
+      throw error;
     }
   }
 
   /**
-   * Stops or pauses the game.
+   * Stops the game state and notifies listeners.
    */
   stop(): void {
-    this.isRunning = false;
-    this.logger.info("Game stopped");
+    if (!this.isInitialized) {
+      this.logger.warn("GameState not initialized. Nothing to stop.");
+      return;
+    }
+
+    this.emit("stopped");
+    this.isInitialized = false;
+    this.logger.info("GameState stopped");
   }
 
   /**
-   * Resets the entire game state.
-   */
-  reset(): void {
-    this.score = 0;
-    this.isRunning = false;
-    this.logger.info("Game reset");
-  }
-
-  /**
-   * Adds score points.
-   */
-  addScore(points: number): void {
-    this.score += points;
-    this.logger.debug(`Score: ${this.score}`);
-  }
-
-  /**
-   * Returns the current score.
-   */
-  getScore(): number {
-    return this.score;
-  }
-
-  /**
-   * Returns whether the game is currently running.
-   */
-  isActive(): boolean {
-    return this.isRunning;
-  }
-
-  /**
-   * Logs a summary of the current game state (for debugging).
+   * Outputs a debug summary of the current game state.
+   * Safe to call even if not initialized.
    */
   debugSummary(): void {
-    this.logger.info(
-      `Score: ${this.score} | Running: ${this.isRunning}`
-    );
-    this.grid.debugPrint();
+    if (!this._grid) {
+      this.logger.debug("GameState not initialized - no grid to display");
+      return;
+    }
+    
+    this._grid.debugPrint();
+  }
+
+  private validateDimensions(): void {
+    if (this.gridWidth <= 0 || this.gridHeight <= 0) {
+      throw new Error(`Invalid grid dimensions: ${this.gridWidth}x${this.gridHeight}`);
+    }
   }
 }

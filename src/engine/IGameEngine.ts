@@ -1,12 +1,9 @@
 import type { IGameConfig } from "../config/GameConfig";
 import type { GameState } from "../core/GameState";
+import type { Logger } from "../utils/Logger";
 
 
 export interface IGameEngine {
-  initialize(containerId: string, config: IGameConfig, state: GameState): Promise<void>;
-  start(): void;
+  initialize(containerId: string, config: IGameConfig, state: GameState, logger: Logger): Promise<void>;
   destroy(): void;
-
-  addEntity(entity: any): void;
-  removeEntity(entity: any): void;
 }

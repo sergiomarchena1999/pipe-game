@@ -1,107 +1,230 @@
-import type { Logger } from "../utils/Logger"
-import type { Pipe } from "./Pipe";
+import type { Logger } from "../utils/Logger";
+import { Direction, Pipe, PipeType } from "./Pipe";
 import { GridCell } from "./GridCell";
 
 /**
- * Represents the logical grid of the game.
- * Responsible for managing cells, pipes and structural state.
+ * Represents the game grid that manages pipe placement and validation.
+ * Encapsulates all grid-related logic including initialization and validation.
  */
 export class Grid {
-  readonly width: number;
-  readonly height: number;
-  private readonly cells: GridCell[][];
-  private readonly logger: Logger;
+  private readonly cells: ReadonlyArray<ReadonlyArray<GridCell>>;
+  private _startPipe: Pipe | null = null;
 
-  constructor(width: number, height: number, logger: Logger) {
-    this.width = width;
-    this.height = height;
-    this.logger = logger;
-    this.cells = this.createEmptyGrid();
-    this.logger.info(`Grid initialized: ${width}x${height}`);
+  constructor(
+    private readonly width: number,
+    private readonly height: number,
+    private readonly logger: Logger
+  ) {
+    this.validateDimensions(width, height);
+    this.cells = this.initializeGrid();
+    this.logger.info(`Grid initialized with dimensions ${width}x${height}`);
   }
 
   /**
-   * Creates an empty 2D grid of GridCells.
+   * The starting pipe for the game. Must be set during initialization.
+   * @throws {Error} if accessed before initialization
    */
-  private createEmptyGrid(): GridCell[][] {
-    const grid: GridCell[][] = [];
+  get startPipe(): Pipe {
+    if (!this._startPipe) {
+      throw new Error("Grid has not been initialized. Call initialize() first.");
+    }
+    return this._startPipe;
+  }
+
+  /**
+   * Initializes the grid with a starting pipe at a random valid position.
+   * @throws {Error} if no valid positions are available
+   */
+  initialize(): void {
+    if (this._startPipe) {
+      this.logger.warn("Grid already initialized. Skipping re-initialization.");
+      return;
+    }
+
+    this._startPipe = this.createStartPipe();
+  }
+
+  /**
+   * Retrieves the pipe at the specified coordinates.
+   * @returns The pipe at the position, or null if empty or invalid
+   */
+  getPipeAt(x: number, y: number): Pipe | null {
+    return this.isValidPosition(x, y) ? this.cells[y][x].pipe : null;
+  }
+
+  /**
+   * Places a pipe at the specified coordinates.
+   * @throws {Error} if position is invalid
+   */
+  setPipe(x: number, y: number, pipe: Pipe): void {
+    this.validatePosition(x, y);
+    (this.cells[y][x] as GridCell).setPipe(pipe);
+    this.logger.debug(`Placed ${pipe.type} pipe at (${x}, ${y}) with rotation ${pipe.rotation}°`);
+  }
+
+  /**
+   * Removes a pipe from the specified coordinates.
+   * No-op if position is invalid or already empty.
+   */
+  removePipe(x: number, y: number): void {
+    if (this.isValidPosition(x, y)) {
+      (this.cells[y][x] as GridCell).clearPipe();
+      this.logger.debug(`Removed pipe from (${x}, ${y})`);
+    }
+  }
+
+  /**
+   * Checks if the given coordinates are within grid boundaries.
+   */
+  isValidPosition(x: number, y: number): boolean {
+    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+  }
+
+  /**
+   * Clears all pipes from the grid, excluding the start pipe.
+   */
+  clear(): void {
     for (let y = 0; y < this.height; y++) {
-      const row: GridCell[] = [];
       for (let x = 0; x < this.width; x++) {
-        row.push(new GridCell(x, y));
-      }
-      grid.push(row);
-    }
-    return grid;
-  }
-
-  /**
-   * Returns the cell at a specific position, or null if out of bounds.
-   */
-  getCell(x: number, y: number): GridCell | null {
-    if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
-      return null;
-    }
-    return this.cells[y][x];
-  }
-
-  /**
-   * Places a pipe into a specific cell.
-   */
-  placePipe(x: number, y: number, pipe: Pipe): boolean {
-    const cell = this.getCell(x, y);
-    if (!cell) {
-      this.logger.warn(`Tried to place pipe out of bounds at ${x},${y}`);
-      return false;
-    }
-    cell.setPipe(pipe);
-    this.logger.debug(`Pipe placed at (${x}, ${y})`);
-    return true;
-  }
-
-  /**
-   * Removes the pipe from a cell.
-   */
-  removePipe(x: number, y: number): boolean {
-    const cell = this.getCell(x, y);
-    if (!cell || !cell.pipe) return false;
-    cell.clearPipe();
-    this.logger.debug(`Pipe removed at (${x}, ${y})`);
-    return true;
-  }
-
-  /**
-   * Returns a flat list of all cells (useful for iteration or rendering).
-   */
-  getAllCells(): GridCell[] {
-    return this.cells.flat();
-  }
-
-  getRandomEmptyCell(): GridCell | null {
-    const emptyCells = this.getAllCells().filter(cell => cell.isEmpty());
-    if (emptyCells.length === 0) return null;
-    const index = Math.floor(Math.random() * emptyCells.length);
-    return emptyCells[index];
-  }
-
-  /**
-   * Iterates over all cells with a callback.
-   */
-  forEachCell(callback: (cell: GridCell) => void): void {
-    for (const row of this.cells) {
-      for (const cell of row) {
-        callback(cell);
+        const cell = this.cells[y][x] as GridCell;
+        if (cell.pipe !== this._startPipe) {
+          cell.clearPipe();
+        }
       }
     }
+    this.logger.info("Grid cleared (start pipe preserved)");
   }
 
   /**
-   * Logs the current state (useful for debugging).
+   * Outputs a visual representation of the grid to the logger.
+   * Useful for debugging grid state.
    */
   debugPrint(): void {
-    const rows = this.cells.map(row =>
-      row.map(cell => (cell.pipe ? "O" : ".")).join(" ")
+    const visualization = this.generateGridVisualization();
+    this.logger.debug(`\nGrid State:\n${visualization}`);
+  }
+
+  // Private Methods
+
+  private validateDimensions(width: number, height: number): void {
+    if (width <= 0 || height <= 0) {
+      throw new Error(`Invalid grid dimensions: ${width}x${height}. Both must be positive.`);
+    }
+    if (width > 100 || height > 100) {
+      throw new Error(`Grid dimensions too large: ${width}x${height}. Maximum is 100x100.`);
+    }
+  }
+
+  private validatePosition(x: number, y: number): void {
+    if (!this.isValidPosition(x, y)) {
+      throw new Error(`Position (${x}, ${y}) is outside grid bounds (${this.width}x${this.height})`);
+    }
+  }
+
+  private initializeGrid(): GridCell[][] {
+    return Array.from({ length: this.height }, (_, y) =>
+      Array.from({ length: this.width }, (_, x) => new GridCell(x, y))
     );
-    this.logger.info(`\n${rows.join("\n")}`);
+  }
+
+  private createStartPipe(): Pipe {
+    const cell = this.selectRandomEmptyCell();
+    const rotation = this.selectValidStartRotation(cell);
+    const startPipe = new Pipe(PipeType.Start, cell, rotation);
+    
+    this.setPipe(cell.x, cell.y, startPipe);
+    this.logger.info(`Start pipe created at (${cell.x}, ${cell.y}) with rotation ${rotation}°`);
+    
+    return startPipe;
+  }
+
+  private selectRandomEmptyCell(): GridCell {
+    const emptyCells = this.getEmptyCells();
+    
+    if (emptyCells.length === 0) {
+      throw new Error("No empty cells available in the grid");
+    }
+
+    const randomIndex = Math.floor(Math.random() * emptyCells.length);
+    return emptyCells[randomIndex];
+  }
+
+  private getEmptyCells(): GridCell[] {
+    const emptyCells: GridCell[] = [];
+    
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        emptyCells.push(this.cells[y][x]);
+      }
+    }
+    
+    return emptyCells;
+  }
+
+  private selectValidStartRotation(cell: GridCell): number {
+    const validRotations = this.getValidRotationsForCell(cell);
+    
+    if (validRotations.length === 0) {
+      // Fallback for edge case (single cell grid)
+      this.logger.warn(`No valid rotations found for cell (${cell.x}, ${cell.y}). Using default.`);
+      return 0;
+    }
+
+    const randomIndex = Math.floor(Math.random() * validRotations.length);
+    return validRotations[randomIndex];
+  }
+
+  private getValidRotationsForCell(cell: GridCell): number[] {
+    const rotations = [0, 90, 180, 270] as const;
+    
+    return rotations.filter(rotation => {
+      const direction = this.rotationToDirection(rotation);
+      const { x: nextX, y: nextY } = this.getNeighborCoordinates(cell, direction);
+      return this.isValidPosition(nextX, nextY);
+    });
+  }
+
+  private rotationToDirection(rotation: number): Direction {
+    const normalized = rotation % 360;
+    const directionMap: Record<number, Direction> = {
+      0: Direction.Right,
+      90: Direction.Down,
+      180: Direction.Left,
+      270: Direction.Up,
+    };
+    
+    return directionMap[normalized] ?? Direction.Right;
+  }
+
+  private getNeighborCoordinates(
+    cell: GridCell,
+    direction: Direction
+  ): { x: number; y: number } {
+    const offsets: Record<Direction, { x: number; y: number }> = {
+      [Direction.Right]: { x: 1, y: 0 },
+      [Direction.Left]: { x: -1, y: 0 },
+      [Direction.Down]: { x: 0, y: 1 },
+      [Direction.Up]: { x: 0, y: -1 },
+    };
+
+    const offset = offsets[direction];
+    return { x: cell.x + offset.x, y: cell.y + offset.y };
+  }
+
+  private generateGridVisualization(): string {
+    const pipeSymbols: Record<PipeType, string> = {
+      [PipeType.Start]: "S",
+      [PipeType.Curve]: "L",
+      [PipeType.Straight]: "—",
+      [PipeType.Cross]: "+",
+    };
+
+    return this.cells
+      .map(row =>
+        row
+          .map(cell => cell.pipe ? (pipeSymbols[cell.pipe.type] ?? "?") : "·")
+          .join(" ")
+      )
+      .join("\n");
   }
 }

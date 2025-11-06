@@ -1,51 +1,64 @@
 import type { Pipe } from "./Pipe";
 
 /**
- * Represents a single cell within the Grid.
- * A cell may contain a Pipe, or be empty.
+ * Represents a single cell within the grid.
+ * Immutable position, mutable pipe content.
  */
 export class GridCell {
-  readonly x: number;
-  readonly y: number;
   private _pipe: Pipe | null = null;
 
-  constructor(x: number, y: number) {
-    this.x = x;
-    this.y = y;
+  constructor(
+    public readonly x: number,
+    public readonly y: number
+  ) {
+    if (x < 0 || y < 0) {
+      throw new Error(`Invalid cell coordinates: (${x}, ${y})`);
+    }
   }
 
   /**
-   * Returns the pipe currently in this cell (if any).
+   * Gets the pipe currently occupying this cell.
    */
   get pipe(): Pipe | null {
     return this._pipe;
   }
 
   /**
-   * Places a pipe in this cell.
+   * Places a pipe in this cell, replacing any existing pipe.
    */
   setPipe(pipe: Pipe): void {
     this._pipe = pipe;
   }
 
   /**
-   * Removes the pipe from this cell.
+   * Removes any pipe from this cell.
    */
   clearPipe(): void {
     this._pipe = null;
   }
 
   /**
-   * Whether this cell is currently empty.
+   * Checks if this cell is currently empty.
    */
   isEmpty(): boolean {
     return this._pipe === null;
   }
 
   /**
-   * Returns a lightweight descriptor useful for debugging or serialization.
+   * Serializes cell data for debugging or persistence.
    */
   toJSON(): { x: number; y: number; hasPipe: boolean } {
-    return { x: this.x, y: this.y, hasPipe: !!this._pipe };
+    return { 
+      x: this.x, 
+      y: this.y, 
+      hasPipe: this._pipe !== null 
+    };
+  }
+
+  /**
+   * Returns a string representation of this cell's position.
+   */
+  toString(): string {
+    return `GridCell(${this.x}, ${this.y})`;
   }
 }

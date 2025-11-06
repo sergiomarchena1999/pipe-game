@@ -1,6 +1,7 @@
+import type { GridCell } from "./GridCell";
+
 /**
- * The four cardinal directions on the grid.
- * Used for pipe connections and neighbor lookups.
+ * Cardinal directions on the grid.
  */
 export enum Direction {
   Up = "up",
@@ -10,83 +11,90 @@ export enum Direction {
 }
 
 /**
- * Type of pipe piece (shape). Determines which directions are open.
+ * Available pipe piece types, each with distinct connection patterns.
  */
 export enum PipeType {
   Straight = "straight",
   Curve = "curve",
   Cross = "cross",
-  Start = "start"
+  Start = "start",
 }
 
 /**
  * Represents a single pipe piece on the grid.
- * Stores its type, orientation and connection logic.
+ * Immutable after construction to prevent invalid states.
  */
 export class Pipe {
-  readonly type: PipeType;
-  readonly rotation: number; // 0, 90, 180, 270 (degrees clockwise)
+  public readonly rotation: number;
 
-  constructor(type: PipeType, rotation: number = 0) {
-    this.type = type;
-    this.rotation = rotation % 360;
+  constructor(
+    public readonly type: PipeType,
+    public readonly position: GridCell,
+    rotation: number = 0
+  ) {
+    this.rotation = this.normalizeRotation(rotation);
   }
 
   /**
-   * Returns the open directions for this pipe, after rotation is applied.
+   * Gets all open connection directions for this pipe after rotation.
    */
-  getConnections(): Direction[] {
-    const base = this.getBaseConnections();
-    return base.map(dir => this.rotateDirection(dir, this.rotation));
-  }
-
-  get assetKey(): string {
-    switch (this.type) {
-      case PipeType.Straight:
-        return "pipe-straight";
-      case PipeType.Curve:
-        return "pipe-corner";
-      case PipeType.Cross:
-        return "pipe-cross";
-      case PipeType.Start:
-        return "pipe-start";
-      default:
-        return "pipe-unknown";
-    }
+  getConnections(): ReadonlyArray<Direction> {
+    const baseConnections = this.getBaseConnections();
+    return baseConnections.map(dir => this.rotateDirection(dir, this.rotation));
   }
 
   /**
-   * Defines the base (unrotated) open directions for each pipe type.
+   * Gets the asset key for rendering this pipe type.
+   */
+  get assetKey(): string {
+    const assetKeyMap: Record<PipeType, string> = {
+      [PipeType.Straight]: "pipe-straight",
+      [PipeType.Curve]: "pipe-corner",
+      [PipeType.Cross]: "pipe-cross",
+      [PipeType.Start]: "pipe-start",
+    };
+
+    return assetKeyMap[this.type] ?? "pipe-unknown";
+  }
+
+  /**
+   * Returns base (unrotated) connection directions for this pipe type.
    */
   private getBaseConnections(): Direction[] {
-    switch (this.type) {
-      case PipeType.Straight:
-        return [Direction.Up, Direction.Down];
-      case PipeType.Curve:
-        return [Direction.Up, Direction.Right];
-      case PipeType.Cross:
-        return [Direction.Up, Direction.Right, Direction.Down, Direction.Left];
-      case PipeType.Start:
-        return [Direction.Right];
-      default:
-        return [];
-    }
+    const connectionMap: Record<PipeType, Direction[]> = {
+      [PipeType.Straight]: [Direction.Right, Direction.Left],
+      [PipeType.Curve]: [Direction.Up, Direction.Right],
+      [PipeType.Cross]: [Direction.Up, Direction.Right, Direction.Down, Direction.Left],
+      [PipeType.Start]: [Direction.Right],
+    };
+
+    return connectionMap[this.type] ?? [];
   }
 
   /**
-   * Rotates a direction by a given angle (clockwise).
+   * Rotates a direction clockwise by the given angle.
    */
   private rotateDirection(direction: Direction, rotation: number): Direction {
-    const dirs = [Direction.Up, Direction.Right, Direction.Down, Direction.Left];
-    const index = dirs.indexOf(direction);
-    const offset = Math.floor(rotation / 90);
-    return dirs[(index + offset) % dirs.length];
+    const directions = [Direction.Right, Direction.Down, Direction.Left, Direction.Up];
+    const currentIndex = directions.indexOf(direction);
+    const rotationSteps = Math.floor(rotation / 90);
+    const newIndex = (currentIndex + rotationSteps) % directions.length;
+    
+    return directions[newIndex];
   }
 
   /**
-   * Utility for debugging and rendering.
+   * Normalizes rotation to 0-270 range in 90° increments.
+   */
+  private normalizeRotation(rotation: number): number {
+    const normalized = ((rotation % 360) + 360) % 360;
+    return Math.floor(normalized / 90) * 90;
+  }
+
+  /**
+   * Returns a string representation for debugging.
    */
   toString(): string {
-    return `${this.type} (${this.rotation}°)`;
+    return `pipe-${this.type}(${this.rotation}°)`;
   }
 }

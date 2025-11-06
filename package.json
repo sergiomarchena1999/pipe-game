@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "devDependencies": {
+    "jsdom": "^27.1.0",
     "typescript": "~5.9.3",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vitest": "^4.0.7"
   },
   "dependencies": {
+    "eventemitter3": "^5.0.1",
     "phaser": "^3.90.0"
   }
 }
