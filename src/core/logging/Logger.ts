@@ -1,4 +1,4 @@
-type LogLevel = "debug" | "info" | "warn" | "error" | "none";
+import type { ILogger, LogLevel } from "./ILogger";
 
 const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
@@ -8,7 +8,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   none: 4,
 };
 
-export class Logger {
+export class Logger implements ILogger {
   private readonly context: string;
   private readonly level: LogLevel;
 

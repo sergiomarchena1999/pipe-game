@@ -30,7 +30,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
   if (config.grid.width <= 0 || config.grid.height <= 0) {
     throw new Error("Grid dimensions must be positive");
   }
-  
+
   if (config.grid.cellSize <= 0) {
     throw new Error("Cell size must be positive");
   }

@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { PhaserAssetLoader } from "./PhaserAssetLoader";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { GameState } from "../../core/GameState";
-import type { Logger } from "../../utils/Logger";
+import type { ILogger } from "../../core/logging/ILogger";
 import type { Pipe } from "../../core/Pipe";
 
 import gridCell from "../../assets/grid-background.png";
@@ -10,6 +10,7 @@ import pipeStraight from "../../assets/pipes/pipe-straight.png";
 import pipeCorner from "../../assets/pipes/pipe-corner.png";
 import pipeCross from "../../assets/pipes/pipe-cross.png";
 import pipeStart from "../../assets/pipes/pipe-start.png";
+import type { IPhaserScene } from "./IPhaserScene";
 
 /**
  * Rendering depth layers for proper z-ordering.
@@ -35,13 +36,13 @@ const ASSET_REGISTRY = {
  * Main game scene responsible for rendering the grid and pipes.
  * Subscribes to game state events to update the display.
  */
-export class MainScene extends Phaser.Scene {
+export class MainScene extends Phaser.Scene implements IPhaserScene {
   private readonly config: IGameConfig;
   private readonly state: GameState;
-  private readonly logger: Logger;
+  private readonly logger: ILogger;
   private readonly pipeSprites: Map<string, Phaser.GameObjects.Image>;
 
-  constructor(config: IGameConfig, state: GameState, logger: Logger) {
+  constructor(config: IGameConfig, state: GameState, logger: ILogger) {
     super({ key: "MainScene" });
     this.config = config;
     this.state = state;
@@ -53,7 +54,7 @@ export class MainScene extends Phaser.Scene {
    * Phaser lifecycle: Load all required assets.
    */
   preload(): void {
-    const loader = new PhaserAssetLoader(this);
+    const loader = new PhaserAssetLoader(this, this.logger);
     loader.loadImages(ASSET_REGISTRY);
     loader.startLoading();
   }

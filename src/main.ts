@@ -1,5 +1,5 @@
 import { Game } from "./core/Game";
-import { Logger } from "./utils/Logger";
+import { Logger } from "./core/logging/Logger";
 
 
 /**

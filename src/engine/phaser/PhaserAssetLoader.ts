@@ -1,15 +1,12 @@
-import Phaser from "phaser";
+import type { ILogger } from "../../core/logging/ILogger";
+import type { IPhaserScene } from "./IPhaserScene";
 
 /**
  * Gestor centralizado de assets para Phaser.
  * Evita recargar o registrar texturas duplicadas.
  */
 export class PhaserAssetLoader {
-  private readonly scene: Phaser.Scene;
-
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-  }
+  constructor(private readonly scene: IPhaserScene, private readonly logger: ILogger) { }
 
   /**
    * Carga una imagen si no existe todavía.
@@ -21,7 +18,7 @@ export class PhaserAssetLoader {
     if (!textures.exists(key)) {
       load.image(key, path);
     } else {
-      console.debug(`[AssetLoader] Skipped duplicate texture: ${key}`);
+      this.logger.debug(`[AssetLoader] Skipped duplicate texture: ${key}`);
     }
   }
 

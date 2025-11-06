@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import type { IGameEngine } from "../IGameEngine";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { GameState } from "../../core/GameState";
-import type { Logger } from "../../utils/Logger";
+import type { ILogger } from "../../core/logging/ILogger";
 import { MainScene } from "./MainScene";
 
 /**
@@ -20,7 +20,7 @@ export class PhaserEngine implements IGameEngine {
     containerId: string,
     config: IGameConfig,
     state: GameState,
-    logger: Logger
+    logger: ILogger
   ): Promise<void> {
     if (this.game) {
       throw new Error("Engine already initialized");
@@ -78,7 +78,7 @@ export class PhaserEngine implements IGameEngine {
     };
   }
 
-  private waitForSceneReady(logger: Logger): Promise<void> {
+  private waitForSceneReady(logger: ILogger): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (!this.game) {
         reject(new Error("Game instance not available"));

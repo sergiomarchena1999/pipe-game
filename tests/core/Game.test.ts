@@ -1,31 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { Game } from "../../src/core/Game";
-
-const initializeMock = vi.fn().mockResolvedValue(undefined);
-const destroyMock = vi.fn();
-
-vi.mock("../../src/engine/phaser/PhaserEngine", () => {
-  return {
-    PhaserEngine: class {
-      initialize = initializeMock;
-      destroy = destroyMock;
-    },
-  };
-});
-
-const mockLogger = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-};
+import { initializeMock, destroyMock } from "../setup";
 
 describe("Game", () => {
   let game: Game;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    game = new Game(mockLogger as any);
+    game = new Game(globalThis.mockLogger);
   });
 
   it("should start game and call engine.initialize", async () => {
@@ -44,7 +25,7 @@ describe("Game", () => {
   it("should warn if already running", async () => {
     await game.start();
     await game.start();
-    expect(mockLogger.warn).toHaveBeenCalledWith(
+    expect(globalThis.mockLogger.warn).toHaveBeenCalledWith(
       "Game already running. Ignoring start request."
     );
   });

@@ -1,6 +1,6 @@
 import type { IGameConfig } from "../config/GameConfig";
 import type { GameState } from "../core/GameState";
-import type { Logger } from "../utils/Logger";
+import type { Logger } from "../core/logging/Logger";
 
 
 export interface IGameEngine {

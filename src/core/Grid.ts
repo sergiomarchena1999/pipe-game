@@ -1,4 +1,4 @@
-import type { Logger } from "../utils/Logger";
+import type { ILogger } from "./logging/ILogger";
 import { Direction, Pipe, PipeType } from "./Pipe";
 import { GridCell } from "./GridCell";
 
@@ -13,7 +13,7 @@ export class Grid {
   constructor(
     private readonly width: number,
     private readonly height: number,
-    private readonly logger: Logger
+    private readonly logger: ILogger
   ) {
     this.validateDimensions(width, height);
     this.cells = this.initializeGrid();

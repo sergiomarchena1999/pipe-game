@@ -1,27 +1,20 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Grid } from "../../src/core/Grid";
-
-const mockLogger = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn(),
-  error: vi.fn(),
-};
 
 describe("Grid", () => {
   it("should initialize with start pipe", () => {
-    const grid = new Grid(2, 2, mockLogger as any);
+    const grid = new Grid(2, 2, globalThis.mockLogger);
     grid.initialize();
     expect(grid.startPipe).toBeDefined();
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/Start pipe created/));
+    expect(globalThis.mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/Start pipe created/));
   });
 
   it("should throw on invalid dimensions", () => {
-    expect(() => new Grid(0, 2, mockLogger as any)).toThrow();
+    expect(() => new Grid(0, 2, globalThis.mockLogger)).toThrow();
   });
 
   it("should set and remove pipes correctly", () => {
-    const grid = new Grid(2, 2, mockLogger as any);
+    const grid = new Grid(2, 2, globalThis.mockLogger);
     grid.initialize();
     const pipe = grid.startPipe;
     grid.setPipe(1, 1, pipe);
@@ -31,7 +24,7 @@ describe("Grid", () => {
   });
 
   it("should ignore removePipe out of bounds", () => {
-    const grid = new Grid(2, 2, mockLogger as any);
-    grid.removePipe(-1, 0); // no error
+    const grid = new Grid(2, 2, globalThis.mockLogger);
+    grid.removePipe(-1, 0);
   });
 });

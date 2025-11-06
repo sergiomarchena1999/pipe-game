@@ -1,6 +1,6 @@
 import { EventEmitter } from "eventemitter3";
 import { Grid } from "./Grid";
-import type { Logger } from "../utils/Logger";
+import type { ILogger } from "./logging/ILogger";
 
 interface GameStateEvents {
   initialized: [Grid];
@@ -19,7 +19,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
   constructor(
     private readonly gridWidth: number,
     private readonly gridHeight: number,
-    public readonly logger: Logger
+    public readonly logger: ILogger
   ) {
     super();
     this.validateDimensions();

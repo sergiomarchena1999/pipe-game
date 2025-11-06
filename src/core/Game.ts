@@ -1,4 +1,4 @@
-import type { Logger } from "../utils/Logger";
+import type { ILogger } from "./logging/ILogger";
 import { GameState } from "./GameState";
 import { GameConfig } from "../config/GameConfig";
 import { PhaserEngine } from "../engine/phaser/PhaserEngine";
@@ -13,7 +13,7 @@ export class Game {
   private readonly engine: PhaserEngine;
   private isRunning: boolean = false;
 
-  constructor(private readonly logger: Logger) {
+  constructor(private readonly logger: ILogger) {
     this.state = new GameState(
       GameConfig.grid.width,
       GameConfig.grid.height,
