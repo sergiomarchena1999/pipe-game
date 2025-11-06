@@ -1,14 +1,6 @@
 import type { GridCell } from "./GridCell";
+import { Direction } from "./Direction";
 
-/**
- * Cardinal directions on the grid.
- */
-export enum Direction {
-  Up = "up",
-  Right = "right",
-  Down = "down",
-  Left = "left",
-}
 
 /**
  * Available pipe piece types, each with distinct connection patterns.
@@ -25,23 +17,22 @@ export enum PipeType {
  * Immutable after construction to prevent invalid states.
  */
 export class Pipe {
-  public readonly rotation: number;
-
   constructor(
     public readonly type: PipeType,
     public readonly position: GridCell,
-    rotation: number = 0
-  ) {
-    this.rotation = this.normalizeRotation(rotation);
-  }
+    public readonly direction: Direction
+  ) {}
 
   /**
-   * Gets all open connection directions for this pipe after rotation.
+   * Gets all open connection directions for this pipe.
    */
-  getConnections(): ReadonlyArray<Direction> {
-    const baseConnections = this.getBaseConnections();
-    return baseConnections.map(dir => this.rotateDirection(dir, this.rotation));
-  }
+  getConnections(): readonly Direction[] {
+  const baseConnections = this.getBaseConnections();
+
+  // Calculate how many 90° steps to rotate each base connection
+  const baseDirIndex = Direction.All.indexOf(this.direction);
+  return baseConnections.map(dir => dir.rotate90(baseDirIndex));
+}
 
   /**
    * Gets the asset key for rendering this pipe type.
@@ -72,29 +63,9 @@ export class Pipe {
   }
 
   /**
-   * Rotates a direction clockwise by the given angle.
-   */
-  private rotateDirection(direction: Direction, rotation: number): Direction {
-    const directions = [Direction.Right, Direction.Down, Direction.Left, Direction.Up];
-    const currentIndex = directions.indexOf(direction);
-    const rotationSteps = Math.floor(rotation / 90);
-    const newIndex = (currentIndex + rotationSteps) % directions.length;
-    
-    return directions[newIndex];
-  }
-
-  /**
-   * Normalizes rotation to 0-270 range in 90° increments.
-   */
-  private normalizeRotation(rotation: number): number {
-    const normalized = ((rotation % 360) + 360) % 360;
-    return Math.floor(normalized / 90) * 90;
-  }
-
-  /**
    * Returns a string representation for debugging.
    */
   toString(): string {
-    return `pipe-${this.type}(${this.rotation}°)`;
+    return `pipe-${this.type}(${this.direction})`;
   }
 }

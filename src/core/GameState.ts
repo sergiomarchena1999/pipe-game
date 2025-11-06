@@ -1,6 +1,8 @@
 import { EventEmitter } from "eventemitter3";
-import { Grid } from "./Grid";
 import type { ILogger } from "./logging/ILogger";
+import { PipeQueue } from "./PipeQueue";
+import { Grid } from "./Grid";
+
 
 interface GameStateEvents {
   initialized: [Grid];
@@ -14,6 +16,7 @@ interface GameStateEvents {
  */
 export class GameState extends EventEmitter<GameStateEvents> {
   private _grid: Grid | null = null;
+  private _queue: PipeQueue | null = null;
   private isInitialized: boolean = false;
 
   constructor(
@@ -37,6 +40,15 @@ export class GameState extends EventEmitter<GameStateEvents> {
   }
 
   /**
+   * Gets the pipe queue.
+   * @throws {Error} if accessed before initialization
+   */
+  get queue(): PipeQueue {
+    if (!this._queue) throw new Error("PipeQueue not initialized. Call start() first.");
+    return this._queue;
+  }
+
+  /**
    * Initializes the game state and creates the grid.
    * @throws {Error} if already initialized or if grid creation fails
    */
@@ -46,6 +58,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
 
     try {
+      this._queue = new PipeQueue(this.logger, 5);
       this._grid = new Grid(this.gridWidth, this.gridHeight, this.logger);
       this._grid.initialize();
       this.isInitialized = true;
@@ -80,8 +93,17 @@ export class GameState extends EventEmitter<GameStateEvents> {
       this.logger.debug("GameState not initialized - no grid to display");
       return;
     }
-    
+
     this._grid.debugPrint();
+
+    if (this._queue) {
+      const queueContents = this._queue.contents
+        .map(p => `${p.type}(${p.direction}°)`)
+        .join(", ");
+      this.logger.debug(`Pipe Queue: [${queueContents}]`);
+    } else {
+      this.logger.debug("Pipe Queue not initialized");
+    }
   }
 
   private validateDimensions(): void {

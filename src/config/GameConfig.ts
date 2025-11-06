@@ -31,6 +31,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     throw new Error("Grid dimensions must be positive");
   }
 
+  // Validate cell size
   if (config.grid.cellSize <= 0) {
     throw new Error("Cell size must be positive");
   }
@@ -57,8 +58,8 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
  */
 export const GameConfig: IGameConfig = createGameConfig({
   grid: {
-    width: 2,
-    height: 2,
+    width: 8,
+    height: 8,
     cellSize: 32,
   },
   canvas: {

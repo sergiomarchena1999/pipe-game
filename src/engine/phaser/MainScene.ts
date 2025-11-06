@@ -93,7 +93,7 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
       const startPipe = grid.startPipe;
       this.logger.info(
         `Rendering start pipe at (${startPipe.position.x}, ${startPipe.position.y}) ` +
-        `with rotation ${startPipe.rotation}°`
+        `with direction ${startPipe.direction}°`
       );
       this.createPipeSprite(startPipe);
     });
@@ -110,7 +110,7 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     const sprite = this.add
       .image(centerX, centerY, pipe.assetKey)
       .setOrigin(0.5)
-      .setRotation(Phaser.Math.DegToRad(pipe.rotation))
+      .setRotation(Phaser.Math.DegToRad(pipe.direction.angle))
       .setDepth(RenderDepth.Pipes);
 
     const spriteKey = this.getPipeKey(pipe);

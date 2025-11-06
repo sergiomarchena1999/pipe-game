@@ -32,4 +32,17 @@ describe("GameState", () => {
     state.stop();
     expect(globalThis.mockLogger.warn).toHaveBeenCalledWith("GameState not initialized. Nothing to stop.");
   });
+
+  it("should throw for invalid grid dimensions", () => {
+    expect(() => new GameState(0, 5, globalThis.mockLogger)).toThrow(
+      /Invalid grid dimensions/
+    );
+  });
+
+  it("debugSummary() should log when not initialized", () => {
+    state.debugSummary();
+    expect(globalThis.mockLogger.debug).toHaveBeenCalledWith(
+      "GameState not initialized - no grid to display"
+    );
+  });
 });
