@@ -14,11 +14,7 @@ export class Game {
   private isRunning: boolean = false;
 
   constructor(private readonly logger: ILogger) {
-    this.state = new GameState(
-      GameConfig.grid.width,
-      GameConfig.grid.height,
-      logger
-    );
+    this.state = new GameState(GameConfig, logger);
     this.engine = new PhaserEngine();
   }
 

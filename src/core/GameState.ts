@@ -1,4 +1,5 @@
 import { EventEmitter } from "eventemitter3";
+import type { IGameConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
 import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
@@ -21,13 +22,9 @@ export class GameState extends EventEmitter<GameStateEvents> {
   private isInitialized: boolean = false;
 
   constructor(
-    private readonly gridWidth: number,
-    private readonly gridHeight: number,
+    private readonly config: IGameConfig,
     public readonly logger: ILogger
-  ) {
-    super();
-    this.validateDimensions();
-  }
+  ) { super(); }
 
   /**
    * Gets the game grid.
@@ -59,8 +56,8 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
 
     try {
-      this._queue = new PipeQueue(this.logger, 5);
-      this._grid = new Grid(this.gridWidth, this.gridHeight, this.logger);
+      this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
+      this._grid = new Grid(this.config.grid.width, this.config.grid.height, this.logger);
       this._grid.initialize();
       this.isInitialized = true;
       
@@ -146,12 +143,6 @@ export class GameState extends EventEmitter<GameStateEvents> {
       this.logger.debug(`Pipe Queue: [${queueContents}]`);
     } else {
       this.logger.debug("Pipe Queue not initialized");
-    }
-  }
-
-  private validateDimensions(): void {
-    if (this.gridWidth <= 0 || this.gridHeight <= 0) {
-      throw new Error(`Invalid grid dimensions: ${this.gridWidth}x${this.gridHeight}`);
     }
   }
 }

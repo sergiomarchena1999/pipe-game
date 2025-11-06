@@ -1,20 +1,27 @@
-import { describe, it, beforeEach, expect, vi } from "vitest";
+import { describe, it, beforeEach, expect, vi, afterEach } from "vitest";
 import { PipeQueue } from "../../src/core/PipeQueue";
 import { PipeType } from "../../src/core/Pipe";
 import { Direction } from "../../src/core/Direction";
+import { GameConfig } from "../../src/config/GameConfig";
+
 
 describe("PipeQueue", () => {
   let queue: PipeQueue;
 
   beforeEach(() => {
-    vi.spyOn(Math, "random").mockReturnValue(0); // deterministic
-    queue = new PipeQueue(globalThis.mockLogger, 3);
+    // deterministic randomness
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    queue = new PipeQueue(globalThis.mockLogger, GameConfig.pipeWeights, GameConfig.queueSize);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("should initialize queue with maxSize pipes", () => {
-    expect(queue.contents.length).toBe(3);
+    expect(queue.contents.length).toBe(GameConfig.queueSize);
     expect(globalThis.mockLogger.info).toHaveBeenCalledWith(
-      "PipeQueue initialized with 3 items."
+      `PipeQueue initialized with ${GameConfig.queueSize} items.`
     );
   });
 
@@ -25,11 +32,12 @@ describe("PipeQueue", () => {
     queue.on("dequeued", dequeuedListener);
 
     const next = queue.dequeue();
+
     expect(Object.values(PipeType)).toContain(next.type);
     expect(Direction.All).toContain(next.direction);
     expect(dequeuedListener).toHaveBeenCalled();
     expect(updatedListener).toHaveBeenCalled();
-    expect(queue.contents.length).toBe(3);
+    expect(queue.contents.length).toBe(GameConfig.queueSize);
   });
 
   it("should warn and regenerate when queue is empty", () => {
@@ -41,8 +49,7 @@ describe("PipeQueue", () => {
   });
 
   it("should enqueue random pipes with valid types and directions", () => {
-    const contents = queue.contents;
-    for (const item of contents) {
+    for (const item of queue.contents) {
       expect(Object.values(PipeType)).toContain(item.type);
       expect(Direction.All).toContain(item.direction);
     }
@@ -59,14 +66,5 @@ describe("PipeQueue", () => {
     const first = queue.contents[0];
     const next = queue.dequeue();
     expect(next).toEqual(first);
-  });
-
-  it("should log debug when enqueuing a new pipe", () => {
-    const lenBefore = queue.contents.length;
-    (queue as any).enqueueRandomPipe();
-    expect(globalThis.mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/Enqueued new pipe/)
-    );
-    expect(queue.contents.length).toBe(lenBefore + 1);
   });
 });

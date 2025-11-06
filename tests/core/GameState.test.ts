@@ -1,11 +1,13 @@
 import { describe, it, beforeEach, expect, vi } from "vitest";
+import { GameConfig } from "../../src/config/GameConfig";
 import { GameState } from "../../src/core/GameState";
+
 
 describe("GameState", () => {
   let state: GameState;
 
   beforeEach(() => {
-    state = new GameState(2, 2, globalThis.mockLogger);
+    state = new GameState(GameConfig, globalThis.mockLogger);
   });
 
   it("should start and initialize grid", () => {
@@ -31,12 +33,6 @@ describe("GameState", () => {
   it("should handle double stop gracefully", () => {
     state.stop();
     expect(globalThis.mockLogger.warn).toHaveBeenCalledWith("GameState not initialized. Nothing to stop.");
-  });
-
-  it("should throw for invalid grid dimensions", () => {
-    expect(() => new GameState(0, 5, globalThis.mockLogger)).toThrow(
-      /Invalid grid dimensions/
-    );
   });
 
   it("debugSummary() should log when not initialized", () => {

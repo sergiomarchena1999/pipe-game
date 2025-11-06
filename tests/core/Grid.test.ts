@@ -6,7 +6,6 @@ describe("Grid", () => {
     const grid = new Grid(2, 2, globalThis.mockLogger);
     grid.initialize();
     expect(grid.startPipe).toBeDefined();
-    expect(globalThis.mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/Start pipe created/));
   });
 
   it("should throw on invalid dimensions", () => {

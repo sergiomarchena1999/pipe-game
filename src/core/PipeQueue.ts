@@ -1,12 +1,17 @@
-import { EventEmitter } from "eventemitter3";
 import type { ILogger } from "./logging/ILogger";
-import { PipeType } from "./Pipe";
-import type { PipeDescriptor } from "./PipeDescriptor";
+import { EventEmitter } from "eventemitter3";
 import { Direction } from "./Direction";
+import { PipeType } from "./Pipe";
 
 
-/** Represents a pipe entry in the queue (type + rotation). */
-export interface QueuedPipe extends PipeDescriptor {}
+/** Represents a pipe entry in the queue (type + direction). */
+export interface QueuedPipe {
+  /** The pipe’s type (straight, curve, cross, start). */
+  readonly type: PipeType;
+
+  /** The pipe’s direction (right, down, left, up). */
+  readonly direction: Direction;
+}
 
 /** Events emitted by the PipeQueue. */
 interface PipeQueueEvents {
@@ -23,7 +28,8 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
 
   constructor(
     private readonly logger: ILogger,
-    private readonly maxSize: number = 5
+    private readonly weights: Record<PipeType, number>,
+    private readonly maxSize: number
   ) {
     super();
     this.fillQueue();
@@ -79,18 +85,21 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
   }
 
 
-  /**
-   * Selects a random non-start pipe type.
+    /**
+   * Selects a random non-start pipe type using weighted probabilities.
    */
   private getRandomPipeType(): PipeType {
-    const availableTypes = [
-      PipeType.Straight,
-      PipeType.Curve,
-      PipeType.Cross,
-    ];
+    const entries = Object.entries(this.weights) as [PipeType, number][];
+    const total = entries.reduce((sum, [, w]) => sum + w, 0);
+    let random = Math.random() * total;
 
-    const randomIndex = Math.floor(Math.random() * availableTypes.length);
-    return availableTypes[randomIndex];
+    for (const [type, weight] of entries) {
+      random -= weight;
+      if (random <= 0) return type;
+    }
+
+    // Fallback (shouldn't happen if validation passed)
+    return entries[0][0];
   }
 
   private getRandomDirection(): Direction {

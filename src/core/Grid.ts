@@ -77,7 +77,7 @@ export class Grid {
   setPipe(x: number, y: number, pipe: Pipe): void {
     this.validatePosition(x, y);
     (this.cells[y][x] as GridCell).setPipe(pipe);
-    this.logger.debug(`Placed ${pipe.type} at (${x}, ${y}) with rotation ${pipe.direction}`);
+    this.logger.debug(`Placed ${pipe.type} at (${x}, ${y}) with direction ${pipe.direction}`);
   }
 
   /**
