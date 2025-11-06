@@ -77,6 +77,13 @@ export class Grid {
     return this.cells.flat();
   }
 
+  getRandomEmptyCell(): GridCell | null {
+    const emptyCells = this.getAllCells().filter(cell => cell.isEmpty());
+    if (emptyCells.length === 0) return null;
+    const index = Math.floor(Math.random() * emptyCells.length);
+    return emptyCells[index];
+  }
+
   /**
    * Iterates over all cells with a callback.
    */

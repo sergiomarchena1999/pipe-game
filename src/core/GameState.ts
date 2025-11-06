@@ -1,5 +1,6 @@
-import { Grid } from "./Grid";
 import type { Logger } from "../utils/Logger";
+import { Pipe, PipeType } from "./Pipe";
+import { Grid } from "./Grid";
 
 /**
  * Represents the current logical state of the game.
@@ -10,7 +11,6 @@ export class GameState {
   private readonly logger: Logger;
 
   private score: number = 0;
-  private level: number = 1;
   private isRunning: boolean = false;
 
   constructor(gridWidth: number, gridHeight: number, logger: Logger) {
@@ -24,7 +24,14 @@ export class GameState {
    */
   start(): void {
     this.isRunning = true;
-    this.logger.info(`Game started on level ${this.level}`);
+    this.logger.info("Game started");
+
+    const cell = this.grid.getRandomEmptyCell();
+    if (cell) {
+      const startPipe = new Pipe(PipeType.Start, 0);
+      this.grid.placePipe(cell.x, cell.y, startPipe);
+      this.logger.info(`Start pipe placed at (${cell.x}, ${cell.y})`);
+    }
   }
 
   /**
@@ -40,7 +47,6 @@ export class GameState {
    */
   reset(): void {
     this.score = 0;
-    this.level = 1;
     this.isRunning = false;
     this.logger.info("Game reset");
   }
@@ -68,19 +74,11 @@ export class GameState {
   }
 
   /**
-   * Advances to the next level.
-   */
-  nextLevel(): void {
-    this.level++;
-    this.logger.info(`Advanced to level ${this.level}`);
-  }
-
-  /**
    * Logs a summary of the current game state (for debugging).
    */
   debugSummary(): void {
     this.logger.info(
-      `Level ${this.level} | Score: ${this.score} | Running: ${this.isRunning}`
+      `Score: ${this.score} | Running: ${this.isRunning}`
     );
     this.grid.debugPrint();
   }

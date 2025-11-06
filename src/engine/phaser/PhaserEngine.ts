@@ -1,40 +1,40 @@
 import Phaser from "phaser";
 import type { IGameEngine } from "../IGameEngine";
+import type { IGameConfig } from "../../config/GameConfig";
+import type { GameState } from "../../core/GameState";
+import { MainScene } from "./MainScene";
 
 
 export class PhaserEngine implements IGameEngine {
   private game!: Phaser.Game;
 
-  async initialize(containerId: string): Promise<void> {
-    const config: Phaser.Types.Core.GameConfig = {
+  async initialize(containerId: string, config: IGameConfig, state: GameState): Promise<void> {
+    const { canvas } = config;
+
+    const mainScene = new MainScene(config, state);
+
+    const phaserConfig: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 600,
+      width: canvas.width,
+      height: canvas.height,
       parent: containerId,
-      // scene: [MainScene],
+      backgroundColor: canvas.backgroundColor,
+      scene: [mainScene],
+      physics: { default: "arcade" },
     };
 
-    this.game = new Phaser.Game(config);
+    this.game = new Phaser.Game(phaserConfig);
   }
 
-  async preloadAssets(): Promise<void> {
-    // Aquí podrías cargar imágenes, audio, atlas, etc.
-    // (En Phaser, esto realmente lo hace una Scene)
-  }
+  async preloadAssets(): Promise<void> {}
 
-  start(): void {
-    // Arrancar escena principal o lógica del juego
-  }
+  start(): void {}
 
-  addEntity(entity: any): void {
-    // Añadir sprite, UI, etc.
-  }
-
-  removeEntity(entity: any): void {
-    // Eliminar entidad del escenario
-  }
+  addEntity(entity: any): void {}
+  removeEntity(entity: any): void {}
 
   destroy(): void {
+    this.game.textures.destroy();
     this.game.destroy(true);
   }
 }

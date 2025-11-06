@@ -16,7 +16,7 @@ export enum PipeType {
   Straight = "straight",
   Curve = "curve",
   Cross = "cross",
-  Cap = "cap", // a dead-end
+  Start = "start"
 }
 
 /**
@@ -40,6 +40,21 @@ export class Pipe {
     return base.map(dir => this.rotateDirection(dir, this.rotation));
   }
 
+  get assetKey(): string {
+    switch (this.type) {
+      case PipeType.Straight:
+        return "pipe-straight";
+      case PipeType.Curve:
+        return "pipe-corner";
+      case PipeType.Cross:
+        return "pipe-cross";
+      case PipeType.Start:
+        return "pipe-start";
+      default:
+        return "pipe-unknown";
+    }
+  }
+
   /**
    * Defines the base (unrotated) open directions for each pipe type.
    */
@@ -51,8 +66,8 @@ export class Pipe {
         return [Direction.Up, Direction.Right];
       case PipeType.Cross:
         return [Direction.Up, Direction.Right, Direction.Down, Direction.Left];
-      case PipeType.Cap:
-        return [Direction.Up];
+      case PipeType.Start:
+        return [Direction.Right];
       default:
         return [];
     }
