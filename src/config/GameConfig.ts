@@ -104,7 +104,7 @@ export const GameConfig: IGameConfig = createGameConfig({
   pipeWeights: {
     [PipeType.Start]: 0,
     [PipeType.Straight]: 0.3,
-    [PipeType.Curve]: 0.55,
+    [PipeType.Corner]: 0.55,
     [PipeType.Cross]: 0.15,
   },
 });

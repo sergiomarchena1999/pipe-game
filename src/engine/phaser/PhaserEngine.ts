@@ -32,7 +32,7 @@ export class PhaserEngine implements IGameEngine {
 
       this.game = new Phaser.Game(phaserConfig);
 
-      await this.waitForSceneReady(logger);
+      await this.waitForSceneReady();
       logger.info("Phaser engine initialized successfully");
     } catch (error) {
       logger.error("Failed to initialize Phaser engine", error);
@@ -78,7 +78,7 @@ export class PhaserEngine implements IGameEngine {
     };
   }
 
-  private waitForSceneReady(logger: ILogger): Promise<void> {
+  private waitForSceneReady(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (!this.game) {
         reject(new Error("Game instance not available"));
@@ -100,7 +100,6 @@ export class PhaserEngine implements IGameEngine {
 
         mainScene.events.once(Phaser.Scenes.Events.CREATE, () => {
           clearTimeout(timeout);
-          logger.info("MainScene created and ready");
           resolve();
         });
       });

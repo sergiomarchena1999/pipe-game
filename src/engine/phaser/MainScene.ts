@@ -40,11 +40,15 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
    */
   create(): void {
     this.assetRenderer = new AssetRenderer(this, this.config, this.logger);
-    this.inputManager = new InputManager(this, this.config, this.state, this.assetRenderer, this.logger);
+    this.inputManager = new InputManager(this, this.state, this.assetRenderer, this.logger);
 
     this.assetRenderer.renderGridBackground();
     this.subscribeToGameEvents();
     this.inputManager.initialize();
+
+    const queue = this.state.queue;
+    queue.on("updated", () => this.assetRenderer.renderQueue(queue));
+    this.assetRenderer.renderQueue(queue);
   }
 
   /**

@@ -7,7 +7,7 @@ import { Direction } from "./Direction";
  */
 export enum PipeType {
   Straight = "straight",
-  Curve = "curve",
+  Corner = "corner",
   Cross = "cross",
   Start = "start",
 }
@@ -40,7 +40,7 @@ export class Pipe {
   get assetKey(): string {
     const assetKeyMap: Record<PipeType, string> = {
       [PipeType.Straight]: "pipe-straight",
-      [PipeType.Curve]: "pipe-corner",
+      [PipeType.Corner]: "pipe-corner",
       [PipeType.Cross]: "pipe-cross",
       [PipeType.Start]: "pipe-start",
     };
@@ -54,7 +54,7 @@ export class Pipe {
   private getBaseConnections(): Direction[] {
     const connectionMap: Record<PipeType, Direction[]> = {
       [PipeType.Straight]: [Direction.Right, Direction.Left],
-      [PipeType.Curve]: [Direction.Up, Direction.Right],
+      [PipeType.Corner]: [Direction.Up, Direction.Right],
       [PipeType.Cross]: [Direction.Up, Direction.Right, Direction.Down, Direction.Left],
       [PipeType.Start]: [Direction.Right],
     };

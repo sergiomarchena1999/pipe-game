@@ -8,11 +8,11 @@ describe("Pipe", () => {
   const cell = new GridCell(0, 0);
 
   it("should return correct asset key", () => {
-    expect(new Pipe(PipeType.Curve, cell, Direction.Left).assetKey).toBe("pipe-corner");
+    expect(new Pipe(PipeType.Corner, cell, Direction.Left).assetKey).toBe("pipe-corner");
   });
 
   it("should rotate connections correctly", () => {
-    const pipe = new Pipe(PipeType.Curve, cell, Direction.Right);
+    const pipe = new Pipe(PipeType.Corner, cell, Direction.Right);
     const dirs = pipe.getConnections();
     expect(dirs).toContain(Direction.Right);
     expect(dirs).toContain(Direction.Down);

@@ -8,9 +8,10 @@ import { PipeType } from "./Pipe";
 export interface QueuedPipe {
   /** The pipe’s type (straight, curve, cross, start). */
   readonly type: PipeType;
-
   /** The pipe’s direction (right, down, left, up). */
   readonly direction: Direction;
+  /** The pipe’s asset key. */
+  readonly assetKey: string;
 }
 
 /** Events emitted by the PipeQueue. */
@@ -76,9 +77,11 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
    * Randomly generates a pipe and adds it to the queue.
    */
   private enqueueRandomPipe(): void {
+    const type = this.getRandomPipeType()
     const pipe: QueuedPipe = {
-      type: this.getRandomPipeType(),
+      type,
       direction: this.getRandomDirection(),
+      assetKey: `pipe-${type}`
     };
     this.queue.push(pipe);
     this.logger.debug(`Enqueued new pipe: ${pipe.type} (${pipe.direction})`);

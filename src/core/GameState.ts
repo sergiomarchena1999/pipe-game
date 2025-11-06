@@ -14,41 +14,38 @@ interface GameStateEvents {
 /**
  * Central state manager for the game.
  * Emits events for state changes that other systems can subscribe to.
- * Maintains separation between game logic and rendering.
  */
 export class GameState extends EventEmitter<GameStateEvents> {
-  private _grid: Grid | null = null;
-  private _queue: PipeQueue | null = null;
-  private isInitialized: boolean = false;
+  private readonly _grid: Grid;
+  private readonly _queue: PipeQueue;
+  private isInitialized = false;
 
   constructor(
     private readonly config: IGameConfig,
     public readonly logger: ILogger
-  ) { super(); }
+  ) {
+    super();
 
-  /**
-   * Gets the game grid.
-   * @throws {Error} if accessed before initialization
-   */
+    // Create queue and grid immediately
+    this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
+    this._grid = new Grid(this.config.grid.width, this.config.grid.height, this.logger);
+
+    this.logger.debug("GameState constructed — grid and queue created.");
+  }
+
+  /** Gets the game grid. */
   get grid(): Grid {
-    if (!this._grid) {
-      throw new Error("GameState not initialized. Call start() first.");
-    }
     return this._grid;
   }
 
-  /**
-   * Gets the pipe queue.
-   * @throws {Error} if accessed before initialization
-   */
+  /** Gets the pipe queue. */
   get queue(): PipeQueue {
-    if (!this._queue) throw new Error("PipeQueue not initialized. Call start() first.");
     return this._queue;
   }
 
   /**
-   * Initializes the game state and creates the grid.
-   * @throws {Error} if already initialized or if grid creation fails
+   * Initializes the game state (e.g., fills grid and prepares queue).
+   * @throws {Error} if already initialized
    */
   start(): void {
     if (this.isInitialized) {
@@ -56,11 +53,10 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
 
     try {
-      this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
-      this._grid = new Grid(this.config.grid.width, this.config.grid.height, this.logger);
       this._grid.initialize();
       this.isInitialized = true;
-      
+
+      this.emit("initialized", this._grid);
       this.logger.info("GameState started successfully");
     } catch (error) {
       this.logger.error("Failed to start GameState", error);
@@ -85,18 +81,10 @@ export class GameState extends EventEmitter<GameStateEvents> {
   /**
    * Places the next queued pipe at the given grid coordinates.
    * Returns the created Pipe, or null if placement was invalid.
-   *
-   * This centralizes placement logic in GameState so rendering code only
-   * needs to display the returned Pipe.
    */
   placeNextPipe(x: number, y: number): Pipe | null {
     if (!this.isInitialized) {
       this.logger.warn("GameState not initialized. Ignoring placeNextPipe.");
-      return null;
-    }
-
-    if (!this._grid) {
-      this.logger.error("Grid missing in GameState while placing pipe");
       return null;
     }
 
@@ -128,21 +116,11 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
   /**
    * Outputs a debug summary of the current game state.
-   * Safe to call even if not initialized.
    */
   debugSummary(): void {
-    if (!this._grid) {
-      this.logger.debug("GameState not initialized - no grid to display");
-      return;
-    }
-
-    if (this._queue) {
-      const queueContents = this._queue.contents
-        .map(p => `${p.type}(${p.direction})`)
-        .join(", ");
-      this.logger.debug(`Pipe Queue: [${queueContents}]`);
-    } else {
-      this.logger.debug("Pipe Queue not initialized");
-    }
+    const queueContents = this._queue.contents
+      .map(p => `${p.type}(${p.direction})`)
+      .join(", ");
+    this.logger.debug(`Pipe Queue: [${queueContents}]`);
   }
 }
