@@ -24,9 +24,9 @@ describe("PipeQueue", () => {
     queue.on("updated", updatedListener);
     queue.on("dequeued", dequeuedListener);
 
-    const type = queue.dequeue();
-
-    expect(Object.values(PipeType)).toContain(type);
+    const next = queue.dequeue();
+    expect(Object.values(PipeType)).toContain(next.type);
+    expect(Direction.All).toContain(next.direction);
     expect(dequeuedListener).toHaveBeenCalled();
     expect(updatedListener).toHaveBeenCalled();
     expect(queue.contents.length).toBe(3);
@@ -40,9 +40,33 @@ describe("PipeQueue", () => {
     );
   });
 
-  it("should enqueue pipes with correct types and directions", () => {
+  it("should enqueue random pipes with valid types and directions", () => {
+    const contents = queue.contents;
+    for (const item of contents) {
+      expect(Object.values(PipeType)).toContain(item.type);
+      expect(Direction.All).toContain(item.direction);
+    }
+  });
+
+  it("should emit updated after fillQueue()", () => {
+    const spy = vi.fn();
+    queue.on("updated", spy);
+    (queue as any).fillQueue();
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it("should maintain FIFO order (oldest dequeued first)", () => {
     const first = queue.contents[0];
-    expect(Object.values(PipeType)).toContain(first.type);
-    expect(Direction.All).toContain(first.direction);
+    const next = queue.dequeue();
+    expect(next).toEqual(first);
+  });
+
+  it("should log debug when enqueuing a new pipe", () => {
+    const lenBefore = queue.contents.length;
+    (queue as any).enqueueRandomPipe();
+    expect(globalThis.mockLogger.debug).toHaveBeenCalledWith(
+      expect.stringMatching(/Enqueued new pipe/)
+    );
+    expect(queue.contents.length).toBe(lenBefore + 1);
   });
 });

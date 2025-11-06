@@ -1,88 +1,50 @@
 import Phaser from "phaser";
 import { PhaserAssetLoader } from "./PhaserAssetLoader";
+import { AssetRenderer } from "./AssetRenderer";
+import { InputManager } from "./InputManager";
+
+import type { IPhaserScene } from "./IPhaserScene";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { GameState } from "../../core/GameState";
 import type { ILogger } from "../../core/logging/ILogger";
-import type { Pipe } from "../../core/Pipe";
 
-import gridCell from "../../assets/grid-background.png";
-import pipeStraight from "../../assets/pipes/pipe-straight.png";
-import pipeCorner from "../../assets/pipes/pipe-corner.png";
-import pipeCross from "../../assets/pipes/pipe-cross.png";
-import pipeStart from "../../assets/pipes/pipe-start.png";
-import type { IPhaserScene } from "./IPhaserScene";
-
-/**
- * Rendering depth layers for proper z-ordering.
- */
-const enum RenderDepth {
-  Background = 0,
-  Pipes = 1,
-  Effects = 2,
-}
-
-/**
- * Asset registry mapping logical names to file paths.
- */
-const ASSET_REGISTRY = {
-  "grid-cell": gridCell,
-  "pipe-straight": pipeStraight,
-  "pipe-corner": pipeCorner,
-  "pipe-cross": pipeCross,
-  "pipe-start": pipeStart,
-} as const;
 
 /**
  * Main game scene responsible for rendering the grid and pipes.
  * Subscribes to game state events to update the display.
  */
 export class MainScene extends Phaser.Scene implements IPhaserScene {
-  private readonly config: IGameConfig;
-  private readonly state: GameState;
-  private readonly logger: ILogger;
-  private readonly pipeSprites: Map<string, Phaser.GameObjects.Image>;
+  private assetLoader!: PhaserAssetLoader;
+  private assetRenderer!: AssetRenderer;
+  private inputManager!: InputManager;
 
-  constructor(config: IGameConfig, state: GameState, logger: ILogger) {
+  constructor(
+    private readonly config: IGameConfig,
+    private readonly state: GameState,
+    private readonly logger: ILogger
+  ) {
     super({ key: "MainScene" });
-    this.config = config;
-    this.state = state;
-    this.logger = logger;
-    this.pipeSprites = new Map();
   }
 
   /**
    * Phaser lifecycle: Load all required assets.
    */
   preload(): void {
-    const loader = new PhaserAssetLoader(this, this.logger);
-    loader.loadImages(ASSET_REGISTRY);
-    loader.startLoading();
+    this.assetLoader = new PhaserAssetLoader(this, this.logger);
+    this.assetLoader.loadAll();
+    this.assetLoader.startLoading();
   }
 
   /**
    * Phaser lifecycle: Set up the initial scene.
    */
   create(): void {
-    this.renderGridBackground();
+    this.assetRenderer = new AssetRenderer(this, this.config, this.logger);
+    this.inputManager = new InputManager(this, this.config, this.state, this.assetRenderer, this.logger);
+
+    this.assetRenderer.renderGridBackground();
     this.subscribeToGameEvents();
-  }
-
-  /**
-   * Renders the grid background cells.
-   */
-  private renderGridBackground(): void {
-    const { cellSize, width, height } = this.config.grid;
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        this.add
-          .image(x * cellSize, y * cellSize, "grid-cell")
-          .setOrigin(0)
-          .setDepth(RenderDepth.Background);
-      }
-    }
-
-    this.logger.debug(`Grid background rendered: ${width}x${height} cells`);
+    this.inputManager.initialize();
   }
 
   /**
@@ -93,36 +55,9 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
       const startPipe = grid.startPipe;
       this.logger.info(
         `Rendering start pipe at (${startPipe.position.x}, ${startPipe.position.y}) ` +
-        `with direction ${startPipe.direction}°`
+        `with direction ${startPipe.direction}`
       );
-      this.createPipeSprite(startPipe);
+      this.assetRenderer.renderPipe(startPipe);
     });
-  }
-
-  /**
-   * Creates and positions a sprite for the given pipe.
-   */
-  private createPipeSprite(pipe: Pipe): Phaser.GameObjects.Image {
-    const { cellSize } = this.config.grid;
-    const centerX = pipe.position.x * cellSize + cellSize / 2;
-    const centerY = pipe.position.y * cellSize + cellSize / 2;
-
-    const sprite = this.add
-      .image(centerX, centerY, pipe.assetKey)
-      .setOrigin(0.5)
-      .setRotation(Phaser.Math.DegToRad(pipe.direction.angle))
-      .setDepth(RenderDepth.Pipes);
-
-    const spriteKey = this.getPipeKey(pipe);
-    this.pipeSprites.set(spriteKey, sprite);
-
-    return sprite;
-  }
-
-  /**
-   * Generates a unique key for tracking pipe sprites.
-   */
-  private getPipeKey(pipe: Pipe): string {
-    return `${pipe.position.x},${pipe.position.y}`;
   }
 }

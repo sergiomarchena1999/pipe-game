@@ -29,9 +29,9 @@ export class PhaserEngine implements IGameEngine {
     try {
       const mainScene = new MainScene(config, state, logger);
       const phaserConfig = this.createPhaserConfig(containerId, config, mainScene);
-      
+
       this.game = new Phaser.Game(phaserConfig);
-      
+
       await this.waitForSceneReady(logger);
       logger.info("Phaser engine initialized successfully");
     } catch (error) {

@@ -1,19 +1,50 @@
 import type { ILogger } from "../../core/logging/ILogger";
 import type { IPhaserScene } from "./IPhaserScene";
 
+import gridCell from "../../assets/grid-background.png";
+import pipeStraight from "../../assets/pipes/pipe-straight.png";
+import pipeCorner from "../../assets/pipes/pipe-corner.png";
+import pipeCross from "../../assets/pipes/pipe-cross.png";
+import pipeStart from "../../assets/pipes/pipe-start.png";
+
+
 /**
- * Gestor centralizado de assets para Phaser.
- * Evita recargar o registrar texturas duplicadas.
+ * Centralized asset manager for Phaser.
+ * Ensures no duplicate textures are registered and provides
+ * a self-contained registry of all default game assets.
  */
 export class PhaserAssetLoader {
-  constructor(private readonly scene: IPhaserScene, private readonly logger: ILogger) { }
+  /**
+   * Default asset registry.
+   * Maps logical keys to file paths.
+   */
+  private static readonly ASSETS = {
+    "grid-cell": gridCell,
+    "pipe-straight": pipeStraight,
+    "pipe-corner": pipeCorner,
+    "pipe-cross": pipeCross,
+    "pipe-start": pipeStart,
+  } as const;
+
+  constructor(
+    private readonly scene: IPhaserScene,
+    private readonly logger: ILogger
+  ) {}
 
   /**
-   * Carga una imagen si no existe todavía.
-   * @param key - clave única del asset
-   * @param path - ruta al archivo
+   * Loads all registered assets.
    */
-  loadImage(key: string, path: string): void {
+  loadAll(): void {
+    this.logger.debug("[AssetLoader] Starting to load all assets");
+    this.loadImages(PhaserAssetLoader.ASSETS);
+  }
+
+  /**
+   * Loads a single image if it hasn’t been loaded yet.
+   * @param key - Unique asset key
+   * @param path - File path
+   */
+  private loadImage(key: string, path: string): void {
     const { textures, load } = this.scene;
     if (!textures.exists(key)) {
       load.image(key, path);
@@ -23,18 +54,19 @@ export class PhaserAssetLoader {
   }
 
   /**
-   * Carga múltiples imágenes a la vez.
+   * Loads a set of images from the given key/path map.
    */
-  loadImages(assets: Record<string, string>): void {
+  private loadImages(assets: Record<string, string>): void {
     for (const [key, path] of Object.entries(assets)) {
       this.loadImage(key, path);
     }
   }
 
   /**
-   * Llama al start del Loader de Phaser.
+   * Starts the Phaser loader.
    */
   startLoading(): void {
     this.scene.load.start();
+    this.logger.debug("[AssetLoader] Loader started");
   }
 }

@@ -40,7 +40,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
    * Removes and returns the next pipe from the queue.
    * Automatically refills the queue afterward.
    */
-  dequeue(): PipeType {
+  dequeue(): QueuedPipe {
     if (this.queue.length === 0) {
       this.logger.warn("PipeQueue is empty — regenerating.");
       this.fillQueue();
@@ -52,7 +52,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     this.emit("updated", this.queue);
     this.logger.debug(`Dequeued pipe: ${next}`);
 
-    return next.type;
+    return next;
   }
 
   /**
@@ -75,7 +75,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
       direction: this.getRandomDirection(),
     };
     this.queue.push(pipe);
-    this.logger.debug(`Enqueued new pipe: ${pipe.type} (${pipe.direction}°)`);
+    this.logger.debug(`Enqueued new pipe: ${pipe.type} (${pipe.direction})`);
   }
 
 

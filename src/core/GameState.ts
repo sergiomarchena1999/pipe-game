@@ -1,6 +1,7 @@
 import { EventEmitter } from "eventemitter3";
 import type { ILogger } from "./logging/ILogger";
 import { PipeQueue } from "./PipeQueue";
+import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
 
 
@@ -85,6 +86,50 @@ export class GameState extends EventEmitter<GameStateEvents> {
   }
 
   /**
+   * Places the next queued pipe at the given grid coordinates.
+   * Returns the created Pipe, or null if placement was invalid.
+   *
+   * This centralizes placement logic in GameState so rendering code only
+   * needs to display the returned Pipe.
+   */
+  placeNextPipe(x: number, y: number): Pipe | null {
+    if (!this.isInitialized) {
+      this.logger.warn("GameState not initialized. Ignoring placeNextPipe.");
+      return null;
+    }
+
+    if (!this._grid) {
+      this.logger.error("Grid missing in GameState while placing pipe");
+      return null;
+    }
+
+    // Validate bounds
+    if (!this._grid.isValidPosition(x, y)) {
+      this.logger.debug(`Attempt to place pipe out of bounds: (${x}, ${y})`);
+      return null;
+    }
+
+    // Validate emptiness
+    if (!this._grid.isCellEmpty(x, y)) {
+      this.logger.debug(`Attempt to place pipe in non-empty cell: (${x}, ${y})`);
+      return null;
+    }
+
+    try {
+      const queued = this._queue!.dequeue();
+      const cell = this._grid.getCell(x, y);
+      const pipe = new Pipe(queued.type, cell, queued.direction);
+      this._grid.setPipe(x, y, pipe);
+
+      this.logger.info(`Placed pipe ${queued.type} at (${x}, ${y}) dir=${queued.direction}`);
+      return pipe;
+    } catch (err) {
+      this.logger.error("Failed to place next pipe", err);
+      return null;
+    }
+  }
+
+  /**
    * Outputs a debug summary of the current game state.
    * Safe to call even if not initialized.
    */
@@ -94,11 +139,9 @@ export class GameState extends EventEmitter<GameStateEvents> {
       return;
     }
 
-    this._grid.debugPrint();
-
     if (this._queue) {
       const queueContents = this._queue.contents
-        .map(p => `${p.type}(${p.direction}°)`)
+        .map(p => `${p.type}(${p.direction})`)
         .join(", ");
       this.logger.debug(`Pipe Queue: [${queueContents}]`);
     } else {

@@ -46,6 +46,23 @@ export class Grid {
   }
 
   /**
+   * Returns the GridCell object at the given coordinates.
+   * @throws {Error} if position is invalid
+   */
+  getCell(x: number, y: number): GridCell {
+    this.validatePosition(x, y);
+    return this.cells[y][x] as GridCell;
+  }
+
+  /**
+   * Returns true when the cell at (x,y) is empty (no pipe).
+   */
+  isCellEmpty(x: number, y: number): boolean {
+    if (!this.isValidPosition(x, y)) return false;
+    return (this.cells[y][x] as GridCell).isEmpty();
+  }
+
+  /**
    * Retrieves the pipe at the specified coordinates.
    * @returns The pipe at the position, or null if empty or invalid
    */
@@ -60,7 +77,7 @@ export class Grid {
   setPipe(x: number, y: number, pipe: Pipe): void {
     this.validatePosition(x, y);
     (this.cells[y][x] as GridCell).setPipe(pipe);
-    this.logger.debug(`Placed ${pipe.type} at (${x}, ${y}) with rotation ${pipe.direction}°`);
+    this.logger.debug(`Placed ${pipe.type} at (${x}, ${y}) with rotation ${pipe.direction}`);
   }
 
   /**
@@ -96,14 +113,6 @@ export class Grid {
     this.logger.info("Grid cleared (start pipe preserved)");
   }
 
-  /**
-   * Outputs a visual representation of the grid to the logger.
-   */
-  debugPrint(): void {
-    const visualization = this.generateGridVisualization();
-    this.logger.debug(`\nGrid State:\n${visualization}`);
-  }
-
   private validateDimensions(width: number, height: number): void {
     if (width <= 0 || height <= 0) {
       throw new Error(`Invalid grid dimensions: ${width}x${height}. Both must be positive.`);
@@ -131,8 +140,6 @@ export class Grid {
     const startPipe = new Pipe(PipeType.Start, cell, direction);
 
     this.setPipe(cell.x, cell.y, startPipe);
-    this.logger.info(`Start pipe created at (${cell.x}, ${cell.y}) with direction ${direction}°`);
-
     return startPipe;
   }
 
@@ -172,22 +179,5 @@ export class Grid {
 
     const randomDir = validDirections[Math.floor(Math.random() * validDirections.length)];
     return randomDir;
-  }
-
-  private generateGridVisualization(): string {
-    const pipeSymbols: Record<PipeType, string> = {
-      [PipeType.Start]: "S",
-      [PipeType.Curve]: "L",
-      [PipeType.Straight]: "—",
-      [PipeType.Cross]: "+",
-    };
-
-    return this.cells
-      .map(row =>
-        row
-          .map(cell => cell.pipe ? (pipeSymbols[cell.pipe.type] ?? "?") : "·")
-          .join(" ")
-      )
-      .join("\n");
   }
 }
