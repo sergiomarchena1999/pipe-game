@@ -59,6 +59,6 @@ export class GridCell {
    * Returns a string representation of this cell's position.
    */
   toString(): string {
-    return `GridCell(${this.x}, ${this.y})`;
+    return `(${this.x}, ${this.y})`;
   }
 }

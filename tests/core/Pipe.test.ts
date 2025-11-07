@@ -14,8 +14,13 @@ describe("Pipe", () => {
   it("should rotate connections correctly", () => {
     const pipe = new Pipe(PipeType.Corner, cell, Direction.Right);
     const dirs = pipe.getConnections();
+    expect(dirs).toContain(Direction.Up);
     expect(dirs).toContain(Direction.Right);
-    expect(dirs).toContain(Direction.Down);
+
+    const pipe2 = new Pipe(PipeType.Corner, cell, Direction.Left);
+    const dirs2 = pipe2.getConnections();
+    expect(dirs2).toContain(Direction.Left);
+    expect(dirs2).toContain(Direction.Down);
   });
 
   it("toString() should include type and direction", () => {

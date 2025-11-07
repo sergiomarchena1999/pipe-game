@@ -5,6 +5,8 @@ import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
 
+import { calculateWaterFlow } from "./WaterFlow";
+
 
 interface GameStateEvents {
   initialized: [Grid];
@@ -107,6 +109,9 @@ export class GameState extends EventEmitter<GameStateEvents> {
       this._grid.setPipe(x, y, pipe);
 
       this.logger.info(`Placed pipe ${queued.type} at (${x}, ${y}) dir=${queued.direction}`);
+
+      const flow = calculateWaterFlow(this._grid, this.logger);
+      this.logger.info(`Water flow updated: ${flow.count} connected cells.`);
       return pipe;
     } catch (err) {
       this.logger.error("Failed to place next pipe", err);

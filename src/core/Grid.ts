@@ -71,6 +71,75 @@ export class Grid {
   }
 
   /**
+   * Calculates the next pipe in the water flow sequence.
+   *
+   * API Contract:
+   *   - exitDirection (input): direction of water leaving the current pipe.
+   *   - entryDirection (output): opposite of the given exitDirection.
+ *       Represents the side from which the next pipe receives the flow.
+   *   - exitDirection (output): the new direction water leaves the next pipe.
+   *
+   * The method checks whether the next pipe has a connection
+   * in its `entryDirection`. If not, the flow stops and null is returned.
+   */
+  getNextPipeInFlow(currentX: number, currentY: number, exitDirection: Direction) : 
+    { pipe: Pipe; entryDirection: Direction; exitDirection: Direction } | null {
+    // Calculate next position
+    const nextX = currentX + exitDirection.dx;
+    const nextY = currentY + exitDirection.dy;
+
+    // Check if next position is valid
+    if (!this.isValidPosition(nextX, nextY)) {
+      this.logger.debug(`Flow ends: out of bounds at (${nextX}, ${nextY})`);
+      return null;
+    }
+
+    // Check if there's a pipe at next position
+    const nextPipe = this.getPipeAt(nextX, nextY);
+    if (!nextPipe) {
+      this.logger.debug(`Flow ends: no pipe at (${nextX}, ${nextY})`);
+      return null;
+    }
+
+    // Water enters from the direction it came
+    const entryDirection = exitDirection.opposite;
+    const connections = nextPipe.getConnections();
+
+    // Check if pipe accepts water from this direction
+    if (!connections.some(conn => conn.name === entryDirection.name)) {
+      this.logger.debug(`Flow ends: pipe at (${nextX}, ${nextY}) doesn't accept water from ${entryDirection}`);
+      return null;
+    }
+
+    // Calculate exit direction based on pipe type
+    let nextExitDirection: Direction | null = null;
+
+    if (nextPipe.type === PipeType.Cross) {
+      // Cross pipes: water flows straight through (opposite direction)
+      nextExitDirection = entryDirection.opposite;
+      // Verify the exit is actually connected
+      if (!connections.some(conn => conn === nextExitDirection)) {
+        nextExitDirection = null;
+      }
+    } else {
+      // Other pipes: find the connection that isn't the entry
+      const possibleExits = connections.filter(conn => conn.name !== entryDirection.name);
+      nextExitDirection = possibleExits.length > 0 ? possibleExits[0] : null;
+    }
+
+    if (!nextExitDirection) {
+      this.logger.debug(`Flow ends: no exit from pipe at (${nextX}, ${nextY})`);
+      return null;
+    }
+
+    return {
+      pipe: nextPipe,
+      entryDirection,
+      exitDirection: nextExitDirection,
+    };
+  }
+
+  /**
    * Places a pipe at the specified coordinates.
    * @throws {Error} if position is invalid
    */
