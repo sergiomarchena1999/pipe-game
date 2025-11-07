@@ -1,7 +1,9 @@
 import type { ILogger } from "./logging/ILogger";
+import { WaterFlowManager } from "./WaterFlow";
 import { Pipe, PipeType } from "./Pipe";
 import { Direction } from "./Direction";
 import { GridCell } from "./GridCell";
+
 
 /**
  * Represents the game grid that manages pipe placement and validation.
@@ -43,6 +45,7 @@ export class Grid {
     }
 
     this._startPipe = this.createStartPipe();
+    WaterFlowManager.initialize(this, this.logger);
   }
 
   /**
@@ -68,75 +71,6 @@ export class Grid {
    */
   getPipeAt(x: number, y: number): Pipe | null {
     return this.isValidPosition(x, y) ? this.cells[y][x].pipe : null;
-  }
-
-  /**
-   * Calculates the next pipe in the water flow sequence.
-   *
-   * API Contract:
-   *   - exitDirection (input): direction of water leaving the current pipe.
-   *   - entryDirection (output): opposite of the given exitDirection.
- *       Represents the side from which the next pipe receives the flow.
-   *   - exitDirection (output): the new direction water leaves the next pipe.
-   *
-   * The method checks whether the next pipe has a connection
-   * in its `entryDirection`. If not, the flow stops and null is returned.
-   */
-  getNextPipeInFlow(currentX: number, currentY: number, exitDirection: Direction) : 
-    { pipe: Pipe; entryDirection: Direction; exitDirection: Direction } | null {
-    // Calculate next position
-    const nextX = currentX + exitDirection.dx;
-    const nextY = currentY + exitDirection.dy;
-
-    // Check if next position is valid
-    if (!this.isValidPosition(nextX, nextY)) {
-      this.logger.debug(`Flow ends: out of bounds at (${nextX}, ${nextY})`);
-      return null;
-    }
-
-    // Check if there's a pipe at next position
-    const nextPipe = this.getPipeAt(nextX, nextY);
-    if (!nextPipe) {
-      this.logger.debug(`Flow ends: no pipe at (${nextX}, ${nextY})`);
-      return null;
-    }
-
-    // Water enters from the direction it came
-    const entryDirection = exitDirection.opposite;
-    const connections = nextPipe.getConnections();
-
-    // Check if pipe accepts water from this direction
-    if (!connections.some(conn => conn.name === entryDirection.name)) {
-      this.logger.debug(`Flow ends: pipe at (${nextX}, ${nextY}) doesn't accept water from ${entryDirection}`);
-      return null;
-    }
-
-    // Calculate exit direction based on pipe type
-    let nextExitDirection: Direction | null = null;
-
-    if (nextPipe.type === PipeType.Cross) {
-      // Cross pipes: water flows straight through (opposite direction)
-      nextExitDirection = entryDirection.opposite;
-      // Verify the exit is actually connected
-      if (!connections.some(conn => conn === nextExitDirection)) {
-        nextExitDirection = null;
-      }
-    } else {
-      // Other pipes: find the connection that isn't the entry
-      const possibleExits = connections.filter(conn => conn.name !== entryDirection.name);
-      nextExitDirection = possibleExits.length > 0 ? possibleExits[0] : null;
-    }
-
-    if (!nextExitDirection) {
-      this.logger.debug(`Flow ends: no exit from pipe at (${nextX}, ${nextY})`);
-      return null;
-    }
-
-    return {
-      pipe: nextPipe,
-      entryDirection,
-      exitDirection: nextExitDirection,
-    };
   }
 
   /**
@@ -213,24 +147,12 @@ export class Grid {
   }
 
   private selectRandomEmptyCell(): GridCell {
-    const emptyCells = this.getEmptyCells();
-    if (emptyCells.length === 0) {
-      throw new Error("No empty cells available in the grid");
-    }
-
-    const randomIndex = Math.floor(Math.random() * emptyCells.length);
-    return emptyCells[randomIndex];
-  }
-
-  private getEmptyCells(): GridCell[] {
     const emptyCells: GridCell[] = [];
     for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
-        emptyCells.push(this.cells[y][x]);
-      }
+      for (let x = 0; x < this.width; x++) emptyCells.push(this.cells[y][x]);
     }
-
-    return emptyCells;
+    if (emptyCells.length === 0) throw new Error("No empty cells available in the grid");
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
   }
 
   /**

@@ -4,8 +4,7 @@ import type { ILogger } from "./logging/ILogger";
 import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
-
-import { calculateWaterFlow } from "./WaterFlow";
+import { WaterFlowManager } from "./WaterFlow";
 
 
 interface GameStateEvents {
@@ -110,8 +109,8 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
       this.logger.info(`Placed pipe ${queued.type} at (${x}, ${y}) dir=${queued.direction}`);
 
-      const flow = calculateWaterFlow(this._grid, this.logger);
-      this.logger.info(`Water flow updated: ${flow.count} connected cells.`);
+      WaterFlowManager.tryAdvance(this._grid, this.logger);
+      this.logger.info(`Water flow updated: ${WaterFlowManager.count} connected cells.`);
       return pipe;
     } catch (err) {
       this.logger.error("Failed to place next pipe", err);

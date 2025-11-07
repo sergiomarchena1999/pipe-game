@@ -1,217 +1,219 @@
-import { describe, it, expect } from "vitest";
-import { calculateWaterFlow } from "../../src/core/WaterFlow";
-import { Grid } from "../../src/core/Grid";
-import { GridCell } from "../../src/core/GridCell";
+import { describe, it, expect, beforeEach } from "vitest";
+import { WaterFlowManager } from "../../src/core/WaterFlow";
 import { Pipe, PipeType } from "../../src/core/Pipe";
 import { Direction } from "../../src/core/Direction";
+import { Grid } from "../../src/core/Grid";
 
-describe("calculateWaterFlow", () => {
-  it("recorre una línea recta de pipes conectados", () => {
-    const grid = new Grid(3, 1, globalThis.mockLogger);
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
-    const c2 = new GridCell(2, 0);
+
+describe("WaterFlowManager", () => {
+  let grid: Grid;
+
+  beforeEach(() => {
+    grid = new Grid(5, 5, globalThis.mockLogger);
+    WaterFlowManager.reset(globalThis.mockLogger);
+  });
+
+  it("should initialize flow from the start pipe", () => {
+    const startCell = grid.getCell(0, 0);
+    const start = new Pipe(PipeType.Start, startCell, Direction.Right);
+
+    (grid as any)._startPipe = start;
+    grid.setPipe(0, 0, start);
+
+    WaterFlowManager.initialize(grid, globalThis.mockLogger);
+
+    expect(WaterFlowManager.count).toBe(1);
+    expect(WaterFlowManager.last).toBe(start);
+  });
+
+  it("should advance through a straight line", () => {
+    const c0 = grid.getCell(0, 0);
+    const c1 = grid.getCell(1, 0);
+    const c2 = grid.getCell(2, 0);
 
     const start = new Pipe(PipeType.Start, c0, Direction.Right);
     const p1 = new Pipe(PipeType.Straight, c1, Direction.Right);
     const p2 = new Pipe(PipeType.Straight, c2, Direction.Right);
 
     (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(p1);
-    (grid as any).cells[0][2].setPipe(p2);
+    grid.setPipe(c0.x, c0.y, start);
+    grid.setPipe(c1.x, c1.y, p1);
+    grid.setPipe(c2.x, c2.y, p2);
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
+    WaterFlowManager.initialize(grid, globalThis.mockLogger);
 
-    expect(result.count).toBe(3);
-    expect(result.pipes.map(p => p.type)).toEqual([
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
+
+    expect(WaterFlowManager.count).toBe(3);
+    expect(WaterFlowManager.pipes.map(p => p.type)).toEqual([
       PipeType.Start,
       PipeType.Straight,
       PipeType.Straight,
     ]);
   });
 
-  it("se detiene si no hay pipe siguiente", () => {
-    const grid = new Grid(2, 1, globalThis.mockLogger);
-    const c0 = new GridCell(0, 0);
-    const start = new Pipe(PipeType.Start, c0, Direction.Right);
+  it("should stop if there is no next connected pipe", () => {
+    const startCell = grid.getCell(0, 0);
+    const start = new Pipe(PipeType.Start, startCell, Direction.Right);
 
     (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
+    grid.setPipe(0, 0, start);
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
+    WaterFlowManager.initialize(grid, globalThis.mockLogger);
 
-    expect(result.count).toBe(1);
-    expect(result.pipes[0]).toBe(start);
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(false);
+    expect(WaterFlowManager.count).toBe(1);
   });
 
-  it("gira correctamente a través de un corner", () => {
-    const grid = new Grid(2, 2, globalThis.mockLogger);
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
-    const c2 = new GridCell(1, 1);
+  it("should correctly turn with a corner pipe", () => {
+    const c0 = grid.getCell(0, 0);
+    const c1 = grid.getCell(1, 0);
+    const c2 = grid.getCell(1, 1);
 
     const start = new Pipe(PipeType.Start, c0, Direction.Right);
-    const corner = new Pipe(PipeType.Corner, c1, Direction.Left); // Left–Down
+    const corner = new Pipe(PipeType.Corner, c1, Direction.Left); // Entry Left → Exit Down
     const end = new Pipe(PipeType.Straight, c2, Direction.Down);
 
     (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(corner);
-    (grid as any).cells[1][1].setPipe(end);
+    grid.setPipe(c0.x, c0.y, start);
+    grid.setPipe(c1.x, c1.y, corner);
+    grid.setPipe(c2.x, c2.y, end);
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
+    WaterFlowManager.initialize(grid, globalThis.mockLogger);
 
-    expect(result.count).toBe(3);
-    expect(result.pipes.map(p => p.type)).toEqual([
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
+
+    expect(WaterFlowManager.count).toBe(3);
+    expect(WaterFlowManager.pipes.map(p => p.type)).toEqual([
       PipeType.Start,
       PipeType.Corner,
       PipeType.Straight,
     ]);
   });
 
-  it("se detiene si el siguiente pipe no conecta físicamente", () => {
-    const grid = new Grid(2, 1, globalThis.mockLogger);
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
+  it("should not advance if the next pipe does not physically connect", () => {
+    const c0 = grid.getCell(0, 0);
+    const c1 = grid.getCell(0, 1);
 
     const start = new Pipe(PipeType.Start, c0, Direction.Right);
-    const wrong = new Pipe(PipeType.Corner, c1, Direction.Right); // conexiones Up–Right → no conecta por Left
+    const wrong = new Pipe(PipeType.Corner, c1, Direction.Right); // Does not connect from Left
 
     (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(wrong);
+    grid.setPipe(0, 0, start);
+    grid.setPipe(1, 0, wrong);
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
+    WaterFlowManager.initialize(grid, globalThis.mockLogger);
 
-    expect(result.count).toBe(1); // se queda solo en el start
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(false);
+    expect(WaterFlowManager.count).toBe(1);
   });
 
-  it("maneja correctamente un grid vacío o sin start pipe", () => {
-    const grid = new Grid(2, 2, globalThis.mockLogger);
+  it("should throw error if initialized without a start pipe", () => {
     (grid as any)._startPipe = undefined;
-
-    expect(() => calculateWaterFlow(grid, globalThis.mockLogger)).toThrow();
+    expect(() => WaterFlowManager.initialize(grid, globalThis.mockLogger)).toThrow();
   });
 });
 
-describe("calculateWaterFlow con Cross pipes", () => {
-  it("fluye en línea recta a través de una cross (entrada izquierda → salida derecha)", () => {
-    const grid = new Grid(3, 1, globalThis.mockLogger);
+describe("WaterFlowManager Cross pipes", () => {
+  let grid: Grid;
 
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
-    const c2 = new GridCell(2, 0);
-
-    const start = new Pipe(PipeType.Start, c0, Direction.Right);
-    const cross = new Pipe(PipeType.Cross, c1, Direction.Up);
-    const straight = new Pipe(PipeType.Straight, c2, Direction.Right);
-
-    (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(cross);
-    (grid as any).cells[0][2].setPipe(straight);
-
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
-
-    expect(result.count).toBe(3);
-    expect(result.pipes.map(p => p.type)).toEqual([
-      PipeType.Start,
-      PipeType.Cross,
-      PipeType.Straight,
-    ]);
+  beforeEach(() => {
+    grid = new Grid(5, 5, globalThis.mockLogger);
+    WaterFlowManager.reset(globalThis.mockLogger);
   });
 
-  it("fluye a través de cross girando hacia abajo (entrada izquierda → salida abajo)", () => {
-    const grid = new Grid(2, 2, globalThis.mockLogger);
+  const crossTestCases = [
+    { from: Direction.Right, entry: Direction.Left, x: 1, y: 2 },
+    { from: Direction.Left,  entry: Direction.Right, x: 3, y: 2 },
+    { from: Direction.Up,    entry: Direction.Down, x: 2, y: 1 },
+    { from: Direction.Down,  entry: Direction.Up, x: 2, y: 3 },
+  ];
 
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
-    const c2 = new GridCell(1, 1);
+  it("should flow correctly through a Cross pipe only if a valid exit exists", () => {
+    crossTestCases.forEach(({ from, entry, x, y }) => {
+      grid = new Grid(5, 5, globalThis.mockLogger);
+      WaterFlowManager.reset(globalThis.mockLogger);
+      
+      const crossCell = grid.getCell(x, y);
+      const startCell = grid.getCell(x - from.dx, y - from.dy);
+      const possibleExits = Direction.All.filter(dir => dir !== entry);
+      const exitDir = possibleExits[0];
+      
+      const nextCell = grid.getCell(x + exitDir.dx, y + exitDir.dy);
 
-    const start = new Pipe(PipeType.Start, c0, Direction.Right);
-    const cross = new Pipe(PipeType.Cross, c1, Direction.Up);
-    const downPipe = new Pipe(PipeType.Straight, c2, Direction.Down);
+      const start = new Pipe(PipeType.Straight, startCell, from);
+      const cross = new Pipe(PipeType.Cross, crossCell, Direction.Up);
+      
+      const nextPipeDirection = exitDir.opposite === Direction.Up || exitDir.opposite === Direction.Down
+        ? Direction.Up
+        : Direction.Left;
+      const nextPipe = new Pipe(PipeType.Straight, nextCell, nextPipeDirection);
 
-    (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(cross);
-    (grid as any).cells[1][1].setPipe(downPipe);
+      grid.setPipe(startCell.x, startCell.y, start);
+      grid.setPipe(crossCell.x, crossCell.y, cross);
+      grid.setPipe(nextCell.x, nextCell.y, nextPipe);
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
-
-    expect(result.count).toBe(3);
-    expect(result.pipes[1].type).toBe(PipeType.Cross);
-    expect(result.pipes[2].type).toBe(PipeType.Straight);
+      const result = WaterFlowManager.getNextPipeInFlow(grid, start, from, globalThis.mockLogger);
+      expect(result).not.toBeNull();
+      expect(result!.pipe).toBe(cross);
+      expect(result!.entryDirection).toBe(entry);
+      expect(result!.exitDirection).not.toBe(entry);
+      expect(result!.exitDirection).toBe(exitDir);
+    });
   });
 
-  it("se detiene si la salida de la cross no tiene conexión válida", () => {
-    const grid = new Grid(2, 2, globalThis.mockLogger);
+  it("should avoid reusing the same exit direction for a Cross pipe", () => {
+    const crossCell = grid.getCell(2, 2);
+    const startCell1 = grid.getCell(1, 2); // flujo Right → Cross
+    const startCell2 = grid.getCell(2, 1); // flujo Down → Cross
 
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
+    const pipe1 = new Pipe(PipeType.Straight, startCell1, Direction.Right);
+    const pipe2 = new Pipe(PipeType.Straight, startCell2, Direction.Down);
+    const cross = new Pipe(PipeType.Cross, crossCell, Direction.Up);
 
-    const start = new Pipe(PipeType.Start, c0, Direction.Right);
-    const cross = new Pipe(PipeType.Cross, c1, Direction.Up);
-    // No hay nada conectado abajo/derecha → debe detenerse
+    grid.setPipe(startCell1.x, startCell1.y, pipe1);
+    grid.setPipe(startCell2.x, startCell2.y, pipe2);
+    grid.setPipe(crossCell.x, crossCell.y, cross);
 
-    (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(cross);
+    WaterFlowManager.reset(globalThis.mockLogger);
+    WaterFlowManager['visitedCrossConnections'].set(cross, new Map([[Direction.Down, Direction.Right]]));
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
+    const result = WaterFlowManager.getNextPipeInFlow(grid, pipe2, Direction.Down, globalThis.mockLogger);
 
-    expect(result.count).toBe(2);
-    expect(result.pipes.map(p => p.type)).toEqual([
-      PipeType.Start,
-      PipeType.Cross,
-    ]);
+    expect(result).not.toBeNull();
+    expect(result!.pipe).toBe(cross);
+    expect(result!.entryDirection).toBe(Direction.Up);
+    expect(result!.exitDirection.name).not.toBe(Direction.Right.name);
   });
 
-  it("detecta bucle cuando dos cross se conectan entre sí (sin salida)", () => {
-    const grid = new Grid(2, 1, globalThis.mockLogger);
+  it("should flow through multiple consecutive Cross pipes", () => {
+    const startCell = grid.getCell(0, 2);
+    const cross1Cell = grid.getCell(1, 2);
+    const cross2Cell = grid.getCell(2, 2);
+    const endCell = grid.getCell(3, 2);
 
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
+    const start = new Pipe(PipeType.Start, startCell, Direction.Right);
+    const cross1 = new Pipe(PipeType.Cross, cross1Cell, Direction.Left); // entry Left
+    const cross2 = new Pipe(PipeType.Cross, cross2Cell, Direction.Left); // entry Left
+    const end = new Pipe(PipeType.Straight, endCell, Direction.Right);
 
-    const start = new Pipe(PipeType.Cross, c0, Direction.Up);
-    const cross2 = new Pipe(PipeType.Cross, c1, Direction.Up);
-
-    // Conectamos ambos lados: start → cross2, y cross2 → start (ciclo)
-    (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(cross2);
-
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
-
-    // Debe detenerse y no entrar en bucle infinito
-    expect(result.count).toBeGreaterThanOrEqual(1);
-    expect(result.count).toBeLessThan(10);
-  });
-
-  it("permite que el flujo atraviese dos cross en secuencia", () => {
-    const grid = new Grid(4, 1, globalThis.mockLogger);
-
-    const c0 = new GridCell(0, 0);
-    const c1 = new GridCell(1, 0);
-    const c2 = new GridCell(2, 0);
-    const c3 = new GridCell(3, 0);
-
-    const start = new Pipe(PipeType.Start, c0, Direction.Right);
-    const cross1 = new Pipe(PipeType.Cross, c1, Direction.Up);
-    const cross2 = new Pipe(PipeType.Cross, c2, Direction.Up);
-    const end = new Pipe(PipeType.Straight, c3, Direction.Right);
+    grid.setPipe(startCell.x, startCell.y, start);
+    grid.setPipe(cross1Cell.x, cross1Cell.y, cross1);
+    grid.setPipe(cross2Cell.x, cross2Cell.y, cross2);
+    grid.setPipe(endCell.x, endCell.y, end);
 
     (grid as any)._startPipe = start;
-    (grid as any).cells[0][0].setPipe(start);
-    (grid as any).cells[0][1].setPipe(cross1);
-    (grid as any).cells[0][2].setPipe(cross2);
-    (grid as any).cells[0][3].setPipe(end);
+    WaterFlowManager.reset(globalThis.mockLogger);
+    WaterFlowManager.initialize(grid, globalThis.mockLogger);
 
-    const result = calculateWaterFlow(grid, globalThis.mockLogger);
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
+    expect(WaterFlowManager.tryAdvance(grid, globalThis.mockLogger)).toBe(true);
 
-    expect(result.count).toBe(4);
-    expect(result.pipes.map(p => p.type)).toEqual([
+    expect(WaterFlowManager.count).toBe(4);
+    expect(WaterFlowManager.pipes.map(p => p.type)).toEqual([
       PipeType.Start,
       PipeType.Cross,
       PipeType.Cross,
