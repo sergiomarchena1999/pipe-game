@@ -1,10 +1,10 @@
 import { EventEmitter } from "eventemitter3";
 import type { IGameConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
+import { WaterFlowManager } from "./WaterFlow";
 import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
-import { WaterFlowManager } from "./WaterFlow";
 
 
 interface GameStateEvents {
@@ -55,9 +55,12 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
     try {
       this._grid.initialize();
+      WaterFlowManager.initialize(this._grid, this.logger);
       this.isInitialized = true;
 
       this.emit("initialized", this._grid);
+
+      WaterFlowManager.startFlow(this.config.pipeFlowStartDelay);
       this.logger.info("GameState started successfully");
     } catch (error) {
       this.logger.error("Failed to start GameState", error);
@@ -65,6 +68,14 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
   }
 
+  update(deltaTime: number): void {
+    WaterFlowManager.update(
+      deltaTime,
+      this._grid,
+      this.logger,
+      this.config.pipeFlowSpeed
+    );
+  }
   /**
    * Stops the game state and notifies listeners.
    */

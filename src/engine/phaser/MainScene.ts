@@ -7,6 +7,7 @@ import type { IPhaserScene } from "./IPhaserScene";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { GameState } from "../../core/GameState";
 import type { ILogger } from "../../core/logging/ILogger";
+import { WaterFlowManager } from "../../core/WaterFlow";
 
 
 /**
@@ -49,6 +50,15 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     const queue = this.state.queue;
     queue.on("updated", () => this.assetRenderer.renderQueue(queue));
     this.assetRenderer.renderQueue(queue);
+  }
+
+  update(_time: number, delta: number): void {
+    const deltaTime = delta / 1000; // Phaser gives delta in ms
+    this.state.update(deltaTime);
+
+    for (const pipe of WaterFlowManager.pipes) {
+      this.assetRenderer.updatePipeFlow(pipe);
+    }
   }
 
   /**

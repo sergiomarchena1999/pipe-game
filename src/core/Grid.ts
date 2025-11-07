@@ -1,5 +1,4 @@
 import type { ILogger } from "./logging/ILogger";
-import { WaterFlowManager } from "./WaterFlow";
 import { Pipe, PipeType } from "./Pipe";
 import { Direction } from "./Direction";
 import { GridCell } from "./GridCell";
@@ -45,7 +44,6 @@ export class Grid {
     }
 
     this._startPipe = this.createStartPipe();
-    WaterFlowManager.initialize(this, this.logger);
   }
 
   /**

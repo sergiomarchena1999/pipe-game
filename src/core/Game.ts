@@ -43,6 +43,10 @@ export class Game {
     }
   }
 
+  update(deltaTime: number): void {
+    this.state.update(deltaTime);
+  }
+
   /**
    * Stops the game and cleans up resources.
    * Safe to call even if game is not running.

@@ -1,7 +1,6 @@
 import { Game } from "./core/Game";
 import { Logger } from "./core/logging/Logger";
 
-
 /**
  * Application entry point.
  * Initializes the logging system and bootstraps the game.
@@ -18,6 +17,22 @@ function initializeApplication(): void {
     if (import.meta.env.DEV) {
       (window as any).game = game;
     }
+
+    // --- GAME LOOP ---
+    let lastTime = performance.now();
+    const loop = (time: number) => {
+      const delta = time - lastTime;
+      lastTime = time;
+
+      if (game.running) {
+        game.update(delta);
+      }
+
+      requestAnimationFrame(loop);
+    };
+
+    requestAnimationFrame(loop);
+    // --- END LOOP ---
 
     logger.info("Application initialized successfully");
   } catch (error) {

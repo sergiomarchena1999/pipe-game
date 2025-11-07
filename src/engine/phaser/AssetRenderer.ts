@@ -2,14 +2,15 @@ import type { IGameConfig } from "../../config/GameConfig";
 import type { ILogger } from "../../core/logging/ILogger";
 import type { GridCell } from "../../core/GridCell";
 import type { PipeQueue } from "../../core/PipeQueue";
-import type { Pipe } from "../../core/Pipe";
+import type { Pipe, WaterFlowState } from "../../core/Pipe";
+import { WaterFlowManager } from "../../core/WaterFlow";
 
 
 /**
  * Handles all game rendering (grid, pipes, effects, etc.)
  */
 export class AssetRenderer {
-  private flowPreviewGraphics?: Phaser.GameObjects.Graphics;
+  private flowGraphics?: Phaser.GameObjects.Graphics;
   private readonly pipeSprites = new Map<GridCell, Phaser.GameObjects.Image>();
   private queueSprites: Phaser.GameObjects.Image[] = [];
 
@@ -33,8 +34,8 @@ export class AssetRenderer {
 
     this.logger.debug(`AssetRenderer centered grid: offset=(${this.offsetX}, ${this.offsetY})`);
 
-    this.flowPreviewGraphics = this.scene.add.graphics({ lineStyle: { width: 3, color: 0x00ffff } });
-    this.flowPreviewGraphics.setDepth(50);
+    this.flowGraphics = this.scene.add.graphics({ lineStyle: { width: 3, color: 0x00ffff } });
+    this.flowGraphics.setDepth(50);
   }
 
   renderGridBackground(): void {
@@ -52,18 +53,47 @@ export class AssetRenderer {
     this.logger.debug(`Grid background rendered: ${width}x${height} cells`);
   }
 
-  renderFlowPreview(pipes: readonly Pipe[]): void {
-    if (!this.flowPreviewGraphics) return;
+  renderFlowPreview(): void {
+    const flow = WaterFlowManager;
+    const last = flow.last;
+    const pipes = flow.pipes;
 
-    this.flowPreviewGraphics.clear();
-    if (pipes.length < 2) return;
+    if (!last || pipes.length < 2 || !this.flowGraphics) return;
 
-    for (let i = 0; i < pipes.length - 1; i++) {
+    // Clear old frame
+    this.flowGraphics.clear();
+
+    for (let i = 0; i < pipes.length - 2; i++) {
       const from = this.gridToWorld(pipes[i].position.x, pipes[i].position.y);
       const to = this.gridToWorld(pipes[i + 1].position.x, pipes[i + 1].position.y);
 
-      this.flowPreviewGraphics.lineBetween(from.worldX, from.worldY, to.worldX, to.worldY);
+      this.flowGraphics.lineBetween(from.worldX, from.worldY, to.worldX, to.worldY);
     }
+
+    if (!last.isFilling()) return;
+
+    // Get previous pipe in path
+    const prev = pipes[pipes.length - 2];
+
+    // Convert both positions to world space
+    const from = this.gridToWorld(prev.position.x, prev.position.y);
+    const to = this.gridToWorld(last.position.x, last.position.y);
+
+    // Get progress of filling (0–1)
+    const flowState = last.getFlowState() as WaterFlowState;
+    if (flowState.status !== "inProgress") return;
+    const progressPercent = flowState.progress / 100;
+
+    // Interpolate end point
+    const midX = Phaser.Math.Linear(from.worldX, to.worldX, progressPercent);
+    const midY = Phaser.Math.Linear(from.worldY, to.worldY, progressPercent);
+
+    // Draw line segment showing water movement
+    this.flowGraphics.lineStyle(6, 0x00bfff, 1);
+    this.flowGraphics.beginPath();
+    this.flowGraphics.moveTo(from.worldX, from.worldY);
+    this.flowGraphics.lineTo(midX, midY);
+    this.flowGraphics.strokePath();
   }
 
   renderPipe(pipe: Pipe): void {
@@ -103,6 +133,29 @@ export class AssetRenderer {
     });
 
     this.logger.debug(`[AssetRenderer] Rendered pipe queue (${queue.contents.length})`);
+  }
+
+  updatePipeFlow(pipe: Pipe): void {
+    const sprite = this.pipeSprites.get(pipe.position);
+    if (!sprite) return;
+
+    const state = pipe.getFlowState();
+    switch (state.status) {
+      case "empty":
+        sprite.setTint(0xffffff);
+        sprite.setAlpha(0.5);
+        break;
+
+      case "inProgress":
+        sprite.setTint(0x00aaff);
+        sprite.setAlpha(0.5 + 0.5 * (state.progress / 100)); // fades in as it fills
+        break;
+
+      case "full":
+        sprite.setTint(0x00ffff);
+        sprite.setAlpha(1);
+        break;
+    }
   }
 
   /**

@@ -1,7 +1,7 @@
-import { Direction } from "./Direction";
 import type { ILogger } from "./logging/ILogger";
 import type { Grid } from "./Grid";
-import { PipeType, type Pipe } from "./Pipe";
+import { PipeType, type Pipe, type WaterFlowState } from "./Pipe";
+import { Direction } from "./Direction";
 
 
 /**
@@ -39,6 +39,8 @@ export class WaterFlowManager {
     this.visitedPipes = new Set([startPipe]);
     this.visitedCrossConnections.clear();
 
+    startPipe.startFilling();
+
     logger.info(`Flow initialized at ${startPipe.position} facing ${startPipe.direction}`);
   }
 
@@ -61,6 +63,38 @@ export class WaterFlowManager {
    */
   static get last(): Pipe | null {
     return this.lastPipe;
+  }
+
+  /**
+   * Returns an iterator of pipes with their flow states (useful for visualization or debug).
+   */
+  static *flowStates(): Iterable<{ pipe: Pipe; state: WaterFlowState }> {
+    for (const pipe of this.path) {
+      yield { pipe, state: pipe.getFlowState() };
+    }
+  }
+  
+  static startFlow(startDelay: number): void {
+    const first = this.path[0];
+    if (first) first.startFilling(startDelay);
+  }
+
+  /**
+   * Updates all pipes in the current flow.
+    * Should be called once per frame or tick.
+    */
+  static update(deltaTime: number, grid: Grid, logger: ILogger, flowSpeed: number): void {
+    for (const pipe of this.path) {
+      pipe.update(deltaTime, flowSpeed);
+    }
+
+    if (this.lastPipe?.isFull()) {
+      const advanced = this.tryAdvance(grid, logger);
+      if (advanced && this.lastPipe) {
+        this.lastPipe.startFilling(); // no delay for subsequent pipes
+        logger.debug(`Flow advanced to ${this.lastPipe.position}`);
+      }
+    }
   }
 
   /**
