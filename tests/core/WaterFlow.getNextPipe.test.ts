@@ -109,7 +109,6 @@ describe('WaterFlowManager.getNextPipeInFlow', () => {
 
       expect(result).not.toBeNull();
       expect(result!.pipe).toBe(pipe2);
-      expect(result!.entryDirection).toBe(Direction.Left);
       expect(result!.exitDirection).toBe(Direction.Right);
     });
 
@@ -127,7 +126,6 @@ describe('WaterFlowManager.getNextPipeInFlow', () => {
 
       expect(result).not.toBeNull();
       expect(result!.pipe).toBe(pipe2);
-      expect(result!.entryDirection).toBe(Direction.Up);
       expect(result!.exitDirection).toBe(Direction.Down);
     });
   });
@@ -147,7 +145,6 @@ describe('WaterFlowManager.getNextPipeInFlow', () => {
 
       expect(result).not.toBeNull();
       expect(result!.pipe).toBe(pipe2);
-      expect(result!.entryDirection).toBe(Direction.Left);
       expect(result!.exitDirection).toBe(Direction.Down);
     });
 
@@ -165,65 +162,71 @@ describe('WaterFlowManager.getNextPipeInFlow', () => {
 
       expect(result).not.toBeNull();
       expect(result!.pipe).toBe(pipe2);
-      expect(result!.entryDirection).toBe(Direction.Up);
       expect(result!.exitDirection).toBe(Direction.Left);
     });
   });
 
   describe('Cross pipe flow', () => {
     it('should flow correctly through cross pipes from all directions', () => {
-      const directions = [
-        { from: Direction.Right, entry: Direction.Left,  exit: Direction.Right, x: 3, y: 2 },
-        { from: Direction.Left,  entry: Direction.Right, exit: Direction.Left,  x: 1, y: 2 },
-        { from: Direction.Up,    entry: Direction.Down,  exit: Direction.Up,    x: 2, y: 1 },
-        { from: Direction.Down,  entry: Direction.Up,    exit: Direction.Down,  x: 2, y: 3 },
-      ];
+    const directions = [
+      { from: Direction.Right, entry: Direction.Left,  exit: Direction.Right, x: 3, y: 2 },
+      { from: Direction.Left,  entry: Direction.Right, exit: Direction.Left,  x: 1, y: 2 },
+      { from: Direction.Up,    entry: Direction.Down,  exit: Direction.Up,    x: 2, y: 1 },
+      { from: Direction.Down,  entry: Direction.Up,    exit: Direction.Down,  x: 2, y: 3 },
+    ];
 
-      directions.forEach((dir) => {
-        const cellFrom = grid.getCell(2, 2);
-        const cellTo   = grid.getCell(dir.x, dir.y);
+    directions.forEach((dir) => {
+      const cellFrom = grid.getCell(2, 2);
+      const cellTo   = grid.getCell(dir.x, dir.y);
 
-        const fromPipe = new Pipe(PipeType.Straight, cellFrom, dir.from);
-        grid.setPipe(cellFrom.x, cellFrom.y, fromPipe);
+      const fromPipe = new Pipe(PipeType.Straight, cellFrom, dir.from);
+      grid.setPipe(cellFrom.x, cellFrom.y, fromPipe);
 
-        const crossPipe = new Pipe(PipeType.Cross, cellTo, Direction.Up);
-        grid.setPipe(cellTo.x, cellTo.y, crossPipe);
+      const crossPipe = new Pipe(PipeType.Cross, cellTo, Direction.Up);
+      grid.setPipe(cellTo.x, cellTo.y, crossPipe);
 
-        WaterFlowManager.reset(globalThis.mockLogger);
+      // Colocamos un vecino que valide la salida del cross pipe
+      const nextX = cellTo.x + dir.exit.dx;
+      const nextY = cellTo.y + dir.exit.dy;
+      const nextCell = grid.getCell(nextX, nextY);
+      const nextPipeDirection = (dir.exit === Direction.Up || dir.exit === Direction.Down) ? Direction.Up : Direction.Left;
+      const nextPipe = new Pipe(PipeType.Straight, nextCell, nextPipeDirection);
+      grid.setPipe(nextCell.x, nextCell.y, nextPipe);
 
-        const result = WaterFlowManager.getNextPipeInFlow(grid, fromPipe, dir.from, globalThis.mockLogger);
+      WaterFlowManager.reset(globalThis.mockLogger);
 
-        expect(result).not.toBeNull();
-        expect(result!.pipe).toBe(crossPipe);
-        expect(result!.entryDirection).toBe(dir.entry);
-        expect(result!.exitDirection).not.toBe(dir.from.opposite);
-      });
+      const result = WaterFlowManager.getNextPipeInFlow(grid, fromPipe, dir.from, globalThis.mockLogger);
+
+      expect(result).not.toBeNull();
+      expect(result!.pipe).toBe(crossPipe);
+      expect(result!.exitDirection).not.toBe(dir.from.opposite);
     });
+  });
 
     it('should avoid reusing the same exit direction for a Cross pipe', () => {
       const cellFrom1 = grid.getCell(1, 2);
       const cellFrom2 = grid.getCell(2, 2);
       const cellCross = grid.getCell(3, 2);
+      const cellNext = grid.getCell(4, 2);
 
       const pipe1 = new Pipe(PipeType.Straight, cellFrom1, Direction.Right);
-      grid.setPipe(cellFrom1.x, cellFrom1.y, pipe1);
-
       const pipe2 = new Pipe(PipeType.Straight, cellFrom2, Direction.Right);
-      grid.setPipe(cellFrom2.x, cellFrom2.y, pipe2);
-
       const crossPipe = new Pipe(PipeType.Cross, cellCross, Direction.Up);
+      const nextPipe = new Pipe(PipeType.Straight, cellNext, Direction.Right);
+
+      grid.setPipe(cellFrom1.x, cellFrom1.y, pipe1);
+      grid.setPipe(cellFrom2.x, cellFrom2.y, pipe2);
       grid.setPipe(cellCross.x, cellCross.y, crossPipe);
+      grid.setPipe(cellNext.x, cellNext.y, nextPipe);
 
       WaterFlowManager.reset(globalThis.mockLogger);
-
       const usedExit = Direction.Down;
-      WaterFlowManager['visitedCrossConnections'].set(crossPipe, new Map([[Direction.Left, usedExit]]));
+      WaterFlowManager['visitedCrossConnections'].set(crossPipe, new Set([usedExit]));
 
       const result = WaterFlowManager.getNextPipeInFlow(grid, pipe2, Direction.Right, globalThis.mockLogger);
 
       expect(result).not.toBeNull();
       expect(result!.pipe).toBe(crossPipe);
-      expect(result!.entryDirection).toBe(Direction.Left);
       expect(result!.exitDirection).not.toBe(usedExit);
     });
   });

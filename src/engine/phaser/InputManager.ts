@@ -1,5 +1,6 @@
 import type { GameState } from "../../core/GameState";
 import type { ILogger } from "../../core/logging/ILogger";
+import { WaterFlowManager } from "../../core/WaterFlow";
 import { AssetRenderer } from "./AssetRenderer";
 
 /**
@@ -42,6 +43,7 @@ export class InputManager {
       }
 
       this.renderer.renderPipe(placed);
+      this.renderer.renderFlowPreview(WaterFlowManager.pipes);
     } catch (err) {
       this.logger.error("Error during grid click", err);
     }

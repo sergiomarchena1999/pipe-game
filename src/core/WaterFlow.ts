@@ -24,21 +24,14 @@ export class WaterFlowManager {
   /** Keeps track of visited pipes */
   private static visitedPipes = new Set<Pipe>();
 
-  /**
-   * Keeps track of visited connections in Cross pipes.
-   * Map<Pipe, Set<"Entry→Exit">>
-   */
-  private static visitedCrossConnections = new Map<Pipe, Map<Direction, Direction>>();
+  /** Keeps track of visited connections in Cross pipes. */
+  private static visitedCrossConnections = new Map<Pipe, Set<Direction>>();
 
   /**
    * Initializes the flow system from the grid's start pipe.
    */
   static initialize(grid: Grid, logger: ILogger): void {
-    const startPipe = (grid as any)._startPipe as Pipe | undefined;
-    if (!startPipe) {
-      throw new Error("No start pipe defined");
-    }
-
+    const startPipe = grid.startPipe;
     this.path = [startPipe];
     this.lastPipe = startPipe;
     this.currentExit = startPipe.direction;
@@ -88,11 +81,9 @@ export class WaterFlowManager {
       return false;
     }
 
-    const { pipe: nextPipe, entryDirection, exitDirection } = next;
-
-    logger.debug(
-      `Flow advanced: ${this.lastPipe.position} → ${nextPipe.position} (${entryDirection} → ${exitDirection})`
-    );
+    const entryDirection = this.currentExit.opposite;
+    const { pipe: nextPipe, exitDirection } = next;
+    logger.debug(`Flow advanced: ${this.lastPipe.position} → ${nextPipe.position} (${entryDirection} → ${exitDirection})`);
 
     this.path.push(nextPipe);
     this.lastPipe = nextPipe;
@@ -102,9 +93,10 @@ export class WaterFlowManager {
     // Register memory for Cross usage
     if (nextPipe.type === PipeType.Cross) {
       if (!this.visitedCrossConnections.has(nextPipe)) {
-        this.visitedCrossConnections.set(nextPipe, new Map());
+        this.visitedCrossConnections.set(nextPipe, new Set());
       }
-      this.visitedCrossConnections.get(nextPipe)!.set(entryDirection, exitDirection);
+      this.visitedCrossConnections.get(nextPipe)!.add(entryDirection);
+      this.visitedCrossConnections.get(nextPipe)!.add(exitDirection);
     }
 
     return true;
@@ -115,7 +107,7 @@ export class WaterFlowManager {
    * Handles Cross pipe memory so it doesn't reuse directions already taken.
    */
   public static getNextPipeInFlow(grid: Grid, fromPipe: Pipe, exitDirection: Direction, logger: ILogger) :
-    { pipe: Pipe; entryDirection: Direction; exitDirection: Direction } | null {
+    { pipe: Pipe; exitDirection: Direction } | null {
     const nextX = fromPipe.position.x + exitDirection.dx;
     const nextY = fromPipe.position.y + exitDirection.dy;
 
@@ -134,47 +126,53 @@ export class WaterFlowManager {
     const connections = nextPipe.getConnections();
 
     if (!connections.includes(entryDirection)) {
-      logger.debug(
-        `Flow ends: pipe at (${nextX}, ${nextY}) doesn't accept water from ${entryDirection}`
-      );
+      logger.debug(`Flow ends: pipe at (${nextX}, ${nextY}) doesn't accept water from ${entryDirection}`);
       return null;
     }
 
     let nextExit: Direction | null = null;
     if (nextPipe.type === PipeType.Cross) {
-        const usedMap = this.visitedCrossConnections.get(nextPipe) ?? new Map<Direction, Direction>();
-        const usedExits = Array.from(usedMap.values());
-        console.log({usedExits})
-
-        // Posibles salidas: no la entrada ni usadas
-        const possibleExits = connections.filter(dir => dir !== entryDirection && !usedExits.includes(dir));
-
-        // Filtrar solo salidas que tengan un pipe vecino y que este acepte la entrada
-        const validExits = possibleExits.filter(dir => {
-            const nx = nextPipe.position.x + dir.dx;
-            const ny = nextPipe.position.y + dir.dy;
-            if (!grid.isValidPosition(nx, ny)) return false;
-            const neighbor = grid.getPipeAt(nx, ny);
-            if (!neighbor) return false;
-
-            const neighborEntry = dir.opposite;
-            return neighbor.getConnections().includes(neighborEntry);
-        });
-
-        if (validExits.length === 0) return null;
-
-        nextExit = validExits[0];
+      nextExit = this.chooseCrossExit(grid, nextPipe, entryDirection, logger);
+      if (nextExit == null) return null;
     } else {
-      const possibleExits = connections.filter((d) => d !== entryDirection);
-      nextExit = possibleExits[0] ?? null;
+      const possibleExits = connections.filter(d => d !== entryDirection);
+      if (possibleExits.length === 0) {
+        logger.debug(`Flow ends: pipe at (${nextX}, ${nextY}) has no valid exit`);
+        return null;
+      }
+      nextExit = possibleExits[0];
     }
 
-    if (!nextExit) {
-      logger.debug(`Flow ends: no valid exit from pipe at (${nextX}, ${nextY})`);
+    return { pipe: nextPipe, exitDirection: nextExit };
+  }
+
+  private static chooseCrossExit(grid: Grid, cross: Pipe, entry: Direction, logger: ILogger): Direction | null {
+    if (!this.visitedCrossConnections.has(cross)) {
+      this.visitedCrossConnections.set(cross, new Set());
+    }
+
+    const usedExits = this.visitedCrossConnections.get(cross)!;
+    const possibleExits = cross.getConnections()
+      .filter(d => d !== entry && !usedExits.has(d))
+      .filter(d => {
+        const { x, y } = cross.position;
+        const nx = x + d.dx;
+        const ny = y + d.dy;
+        const neighbor = grid.getPipeAt(nx, ny);
+        return neighbor != null && neighbor.type != PipeType.Start;
+      });
+
+      
+    if (possibleExits.length === 0) {
+      logger.debug(`Cross at ${cross.position} has no available exits with connected neighbors`);
       return null;
     }
 
-    return { pipe: nextPipe, entryDirection, exitDirection: nextExit };
+    const preferredExit = entry.opposite;
+    const nextExit = possibleExits.includes(preferredExit) ? preferredExit : possibleExits[0];
+
+    usedExits.add(nextExit);
+    return nextExit;
   }
 
   /**

@@ -9,6 +9,7 @@ import type { Pipe } from "../../core/Pipe";
  * Handles all game rendering (grid, pipes, effects, etc.)
  */
 export class AssetRenderer {
+  private flowPreviewGraphics?: Phaser.GameObjects.Graphics;
   private readonly pipeSprites = new Map<GridCell, Phaser.GameObjects.Image>();
   private queueSprites: Phaser.GameObjects.Image[] = [];
 
@@ -30,9 +31,10 @@ export class AssetRenderer {
     this.offsetX = (canvasW - gridPixelWidth) / 2;
     this.offsetY = (canvasH - gridPixelHeight) / 2;
 
-    this.logger.debug(
-      `AssetRenderer centered grid: offset=(${this.offsetX}, ${this.offsetY})`
-    );
+    this.logger.debug(`AssetRenderer centered grid: offset=(${this.offsetX}, ${this.offsetY})`);
+
+    this.flowPreviewGraphics = this.scene.add.graphics({ lineStyle: { width: 3, color: 0x00ffff } });
+    this.flowPreviewGraphics.setDepth(50);
   }
 
   renderGridBackground(): void {
@@ -48,6 +50,20 @@ export class AssetRenderer {
     }
 
     this.logger.debug(`Grid background rendered: ${width}x${height} cells`);
+  }
+
+  renderFlowPreview(pipes: readonly Pipe[]): void {
+    if (!this.flowPreviewGraphics) return;
+
+    this.flowPreviewGraphics.clear();
+    if (pipes.length < 2) return;
+
+    for (let i = 0; i < pipes.length - 1; i++) {
+      const from = this.gridToWorld(pipes[i].position.x, pipes[i].position.y);
+      const to = this.gridToWorld(pipes[i + 1].position.x, pipes[i + 1].position.y);
+
+      this.flowPreviewGraphics.lineBetween(from.worldX, from.worldY, to.worldX, to.worldY);
+    }
   }
 
   renderPipe(pipe: Pipe): void {

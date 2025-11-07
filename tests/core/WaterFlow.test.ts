@@ -158,7 +158,6 @@ describe("WaterFlowManager Cross pipes", () => {
       const result = WaterFlowManager.getNextPipeInFlow(grid, start, from, globalThis.mockLogger);
       expect(result).not.toBeNull();
       expect(result!.pipe).toBe(cross);
-      expect(result!.entryDirection).toBe(entry);
       expect(result!.exitDirection).not.toBe(entry);
       expect(result!.exitDirection).toBe(exitDir);
     });
@@ -178,13 +177,12 @@ describe("WaterFlowManager Cross pipes", () => {
     grid.setPipe(crossCell.x, crossCell.y, cross);
 
     WaterFlowManager.reset(globalThis.mockLogger);
-    WaterFlowManager['visitedCrossConnections'].set(cross, new Map([[Direction.Down, Direction.Right]]));
+    WaterFlowManager['visitedCrossConnections'].set(cross, new Set([Direction.Right]));
 
     const result = WaterFlowManager.getNextPipeInFlow(grid, pipe2, Direction.Down, globalThis.mockLogger);
 
     expect(result).not.toBeNull();
     expect(result!.pipe).toBe(cross);
-    expect(result!.entryDirection).toBe(Direction.Up);
     expect(result!.exitDirection.name).not.toBe(Direction.Right.name);
   });
 
