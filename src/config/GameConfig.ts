@@ -1,4 +1,5 @@
 import { PipeType } from "../core/constants/PipeShapes";
+import { Difficulty } from "../core/Difficulty";
 
 
 /**
@@ -7,10 +8,12 @@ import { PipeType } from "../core/constants/PipeShapes";
 export interface IGameConfig {
   readonly queueSize: number,
   readonly grid: {
-    readonly width: number;
-    readonly height: number;
-    readonly cellSize: number;
+    width: number;
+    height: number;
+    cellSize: number;
+    blockedPercentage: number;
   };
+  readonly difficulty: Difficulty;
   readonly canvas: {
     readonly width: number;
     readonly height: number;
@@ -90,6 +93,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
   return Object.freeze({
     queueSize: config.queueSize,
     grid: Object.freeze({ ...config.grid }),
+    difficulty: config.difficulty,
     canvas: Object.freeze({ ...config.canvas }),
     pipeWeights: Object.freeze({ ...config.pipeWeights }),
     flowStartDelaySeconds: config.flowStartDelaySeconds,
@@ -107,7 +111,9 @@ export const GameConfig: IGameConfig = createGameConfig({
     width: 8,
     height: 8,
     cellSize: 32,
+    blockedPercentage: 10
   },
+  difficulty: Difficulty.Easy,
   canvas: {
     width: 800,
     height: 600,

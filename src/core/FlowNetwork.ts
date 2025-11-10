@@ -80,6 +80,7 @@ export class FlowNetwork {
       };
 
       if (!grid.isValidPosition(nextPos.x, nextPos.y)) continue;
+      if (grid.isBlocked(nextPos.x, nextPos.y)) continue;
 
       const nextPipe = grid.getPipeAt(nextPos.x, nextPos.y);
       if (!nextPipe || !nextPipe.accepts(state.exitDir.opposite)) continue;

@@ -32,8 +32,8 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
     // Create queue and grid immediately
     this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
-    this._grid = new Grid(this.config.grid.width, this.config.grid.height, this.logger);
-    this._score = new ScoreController(this._grid, this.logger);
+    this._grid = new Grid(this.config, this.logger);
+    this._score = new ScoreController(this.config.grid.width, this.config.grid.height, this._grid, this.logger);
 
     this.logger.debug("GameState constructed — grid and queue created.");
   }
@@ -113,7 +113,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
       const queued = this._queue.dequeue();
       const cell = this._grid.getCell(x, y);
       const pipe = new Pipe(cell, queued.shape, queued.direction);
-      this._grid.setPipe(x, y, pipe);
+      this._grid.setPipe(cell, pipe);
 
       this.logger.info(`Placed pipe ${queued.shape.id} at (${x}, ${y}) dir=${queued.direction}`);
       if (this._grid.isConnectedToNetwork(pipe)) {

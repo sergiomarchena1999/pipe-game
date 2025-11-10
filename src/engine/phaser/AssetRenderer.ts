@@ -3,6 +3,7 @@ import type { ILogger } from "../../core/logging/ILogger";
 import type { GridCell } from "../../core/GridCell";
 import type { PipeQueue } from "../../core/PipeQueue";
 import type { Pipe } from "../../core/Pipe";
+import type { Grid } from "../../core/Grid";
 import { FlowNetwork } from "../../core/FlowNetwork";
 
 
@@ -38,19 +39,29 @@ export class AssetRenderer {
     this.flowGraphics.setDepth(50);
   }
 
-  renderGridBackground(): void {
+  renderGridBackground(grid: Grid): void {
     const { cellSize, width, height } = this.config.grid;
+    const offsetX = this.offsetX ?? 0;
+    const offsetY = this.offsetY ?? 0;
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        this.scene.add
-          .image(this.offsetX + x * cellSize, this.offsetY + y * cellSize, "grid-cell")
+        const cell = grid.getCell(x, y);
+        const isBlocked = cell.blocked;
+
+        const tile = this.scene.add
+          .image(offsetX + x * cellSize, offsetY + y * cellSize, "grid-cell")
           .setOrigin(0)
           .setDepth(0);
+
+        if (isBlocked) {
+          tile.setTint(0x444444); // dark gray blocked cell
+          tile.setAlpha(0.7);
+        }
       }
     }
 
-    this.logger.debug(`Grid background rendered: ${width}x${height} cells`);
+    this.logger.debug(`Grid background rendered: ${width}x${height} cells (blocked highlighted)`);
   }
 
   renderFlowPreview(): void {

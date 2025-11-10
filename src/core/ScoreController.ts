@@ -2,13 +2,14 @@ import type { ILogger } from "./logging/ILogger";
 import type { Grid } from "./Grid";
 import type { Pipe } from "./Pipe";
 
+
 /** Tracks the number of pipes successfully connected to the start. */
 export class ScoreController {
   private score = 0;
   private readonly visited: boolean[][];
 
-  constructor(private readonly grid: Grid, private readonly logger: ILogger) {
-    this.visited = Array.from({ length: grid.height }, () => Array(grid.width).fill(false));
+  constructor(width: number, private readonly height: number, private readonly grid: Grid, private readonly logger: ILogger) {
+    this.visited = Array.from({ length: height }, () => Array(width).fill(false));
   }
 
   /** Updates the score by counting all pipes connected to the start pipe. */
@@ -34,7 +35,7 @@ export class ScoreController {
   /** Iterative flood-fill to count connected pipes. */
   private countConnectedPipes(start: Pipe): number {
     // Clear visited matrix
-    for (let y = 0; y < this.grid.height; y++) {
+    for (let y = 0; y < this.height; y++) {
       this.visited[y].fill(false);
     }
 
@@ -49,18 +50,12 @@ export class ScoreController {
       this.visited[y][x] = true;
       count++;
 
-      for (const dir of pipe.getOpenPorts()) {
-        const nx = x + dir.dx;
-        const ny = y + dir.dy;
-
-        if (!this.grid.isValidPosition(nx, ny)) continue;
-
-        const nextPipe = this.grid.getPipeAt(nx, ny);
-        if (!nextPipe) continue;
-
-        // Only proceed if the neighbor pipe has a matching connection
-        if (nextPipe.accepts(dir.opposite)) {
-          stack.push(nextPipe);
+      // use shared helper
+      const connectedNeighbors = this.grid.getConnectedNeighbors(pipe);
+      for (const neighbor of connectedNeighbors) {
+        const { x: nx, y: ny } = neighbor.position;
+        if (!this.visited[ny][nx]) {
+          stack.push(neighbor);
         }
       }
     }

@@ -38,7 +38,7 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     this.assetRenderer = new AssetRenderer(this, this.config, this.logger);
     this.inputManager = new InputManager(this, this.state, this.assetRenderer, this.logger);
 
-    this.assetRenderer.renderGridBackground();
+    this.assetRenderer.renderGridBackground(this.state.grid);
     this.subscribeToGameEvents();
     this.inputManager.initialize();
 

@@ -1,5 +1,8 @@
+import type { IGameConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
+
 import { PipeShapes, PipeType } from "./constants/PipeShapes";
+import { Difficulty } from "./Difficulty";
 import { Direction } from "./Direction";
 import { GridCell } from "./GridCell";
 import { Pipe } from "./Pipe";
@@ -11,16 +14,22 @@ import { Pipe } from "./Pipe";
  */
 export class Grid {
   private readonly cells: ReadonlyArray<ReadonlyArray<GridCell>>;
+  private readonly width: number;
+  private readonly height: number;
+
   private _startPipe: Pipe | null = null;
 
   constructor(
-    public readonly width: number,
-    public readonly height: number,
+    private readonly config: IGameConfig,
     private readonly logger: ILogger
   ) {
-    this.validateDimensions(width, height);
+    this.width = config.grid.width;
+    this.height = config.grid.height;
+
+    this.validateDimensions(this.width, this.height);
     this.cells = this.initializeGrid();
-    this.logger.info(`Grid initialized with dimensions ${width}x${height}`);
+
+    this.logger.info(`Grid initialized with dimensions ${this.width}x${this.height}`);
   }
 
   /**
@@ -44,6 +53,9 @@ export class Grid {
       return;
     }
 
+    const blockedPercentage = this.getBlockedPercentageByDifficulty(this.config.difficulty);
+    this.blockRandomCells(blockedPercentage);
+
     this._startPipe = this.createStartPipe();
   }
 
@@ -56,12 +68,11 @@ export class Grid {
     return this.cells[y][x] as GridCell;
   }
 
-  /**
-   * Returns true when the cell at (x,y) is empty (no pipe).
-   */
+  /** Returns true when the cell at (x,y) is empty (no pipe) and not blocked. */
   isCellEmpty(x: number, y: number): boolean {
     if (!this.isValidPosition(x, y)) return false;
-    return (this.cells[y][x] as GridCell).isEmpty();
+    const cell = this.cells[y][x];
+    return !cell.blocked && cell.isEmpty();
   }
 
   /**
@@ -74,12 +85,15 @@ export class Grid {
 
   /**
    * Places a pipe at the specified coordinates.
-   * @throws {Error} if position is invalid
+   * @throws {Error} if position is invalid or blocked
    */
-  setPipe(x: number, y: number, pipe: Pipe): void {
-    this.validatePosition(x, y);
-    this.cells[y][x].setPipe(pipe);
-    this.logger.debug(`Placed ${pipe} facing ${pipe.direction}`);
+  setPipe(cell: GridCell, pipe: Pipe): void {
+    this.validatePosition(cell.x, cell.y);
+    if (cell.blocked) {
+      throw new Error(`Cannot set pipe on blocked cell ${cell}`);
+    }
+    cell.setPipe(pipe);
+    this.logger.debug(`Placed ${pipe} at ${cell} facing ${pipe.direction}`);
   }
 
   /**
@@ -93,40 +107,52 @@ export class Grid {
     }
   }
 
-  /**
-   * Checks if the given coordinates are within grid boundaries.
-   */
+  /** Marks a specific cell as blocked (impassable). */
+  blockCell(x: number, y: number): void {
+    this.validatePosition(x, y);
+    this.cells[y][x].block();
+    this.logger.debug(`Cell (${x}, ${y}) marked as blocked`);
+  }
+
+  /** Returns true if the cell is blocked. */
+  isBlocked(x: number, y: number): boolean {
+    return this.isValidPosition(x, y) && this.cells[y][x].blocked;
+  }
+
+  /** Checks if the given coordinates are within grid boundaries. */
   isValidPosition(x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < this.width && y < this.height;
   }
 
-  /**
-   * Returns true if this pipe is connected to at least one adjacent pipe.
-   */
+  /** Returns true if this pipe is connected to at least one adjacent pipe. */
   isConnectedToNetwork(pipe: Pipe): boolean {
+    return this.getConnectedNeighbors(pipe).length > 0;
+  }
+
+  /** Returns all pipes directly connected to the given pipe (one step away). */
+  getConnectedNeighbors(pipe: Pipe): Pipe[] {
     const { x, y } = pipe.position;
+    const neighbors: Pipe[] = [];
 
     for (const dir of pipe.getOpenPorts()) {
       const nx = x + dir.dx;
       const ny = y + dir.dy;
 
       if (!this.isValidPosition(nx, ny)) continue;
+      if (this.isBlocked(nx, ny)) continue;
 
       const neighbor = this.getPipeAt(nx, ny);
       if (!neighbor) continue;
 
-      // Connection is valid if neighbor has a port facing back
       if (neighbor.hasOpenPort(dir.opposite)) {
-        return true;
+        neighbors.push(neighbor);
       }
     }
 
-    return false;
+    return neighbors;
   }
 
-  /**
-   * Clears all pipes from the grid, excluding the start pipe.
-   */
+  /** Clears all pipes from the grid, excluding the start pipe. */
   clear(): void {
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
@@ -165,17 +191,65 @@ export class Grid {
     const direction = this.selectValidStartDirection(cell);
     const startPipe = new Pipe(cell, PipeShapes[PipeType.Start], direction);
 
-    this.setPipe(cell.x, cell.y, startPipe);
+    this.setPipe(cell, startPipe);
     return startPipe;
   }
 
   private selectRandomEmptyCell(): GridCell {
     const emptyCells: GridCell[] = [];
     for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) emptyCells.push(this.cells[y][x]);
+      for (let x = 0; x < this.width; x++) {
+        const cell = this.cells[y][x];
+        if (!cell.blocked && cell.isEmpty()) {
+          emptyCells.push(cell);
+        }
+      }
     }
+
     if (emptyCells.length === 0) throw new Error("No empty cells available in the grid");
     return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  }
+
+  /**
+   * Randomly blocks a percentage of cells in the grid.
+   */
+  private blockRandomCells(percentage: number): void {
+    if (percentage <= 0) return;
+
+    const totalCells = this.width * this.height;
+    const cellsToBlock = Math.floor((percentage / 100) * totalCells);
+    const available: GridCell[] = [];
+
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const cell = this.cells[y][x];
+        if (cell.isEmpty() && !cell.blocked) {
+          available.push(cell);
+        }
+      }
+    }
+
+    // Randomly select cells to block
+    for (let i = 0; i < cellsToBlock && available.length > 0; i++) {
+      const index = Math.floor(Math.random() * available.length);
+      const [cell] = available.splice(index, 1);
+      cell.block();
+    }
+
+    this.logger.info(`Blocked ${cellsToBlock} cells (${percentage}%) for difficulty`);
+  }
+
+  private getBlockedPercentageByDifficulty(difficulty?: Difficulty): number {
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return 5;
+      case Difficulty.Medium:
+        return 15;
+      case Difficulty.Hard:
+        return 30;
+      default:
+        return this.config.grid.blockedPercentage ?? 0;
+    }
   }
 
   /**
