@@ -81,11 +81,17 @@ export class AssetRenderer {
     const { pipe, entryDir, exitDir, progress } = FlowNetwork.getActiveState();
     const center = this.gridToWorld(pipe.position.x, pipe.position.y);
 
-    // compute entry point (edge)
-    const entryPoint = {
-      x: center.worldX + entryDir.dx * half,
-      y: center.worldY + entryDir.dy * half,
-    };
+    let entryPoint: { x: number; y: number };
+    if (entryDir) {
+      // compute entry point (edge)
+      entryPoint = {
+        x: center.worldX + entryDir.dx * half,
+        y: center.worldY + entryDir.dy * half,
+      };
+    } else {
+      // For start pipe: begin at the center
+      entryPoint = { x: center.worldX, y: center.worldY };
+    }
 
     // if exit known, animate from entry edge -> exit edge proportional to progress
     if (exitDir) {
@@ -159,27 +165,6 @@ export class AssetRenderer {
     });
 
     this.logger.debug(`[AssetRenderer] Rendered pipe queue (${queue.contents.length})`);
-  }
-
-  updatePipeFlow(pipe: Pipe): void {
-    const sprite = this.pipeSprites.get(pipe.position);
-    if (!sprite) return;
-
-    const state = FlowNetwork.getActiveState();
-    if (!state) {
-      sprite.setTint(0xffffff);
-      sprite.setAlpha(0.5);
-      return;
-    }
-
-    const progress = state.progress;
-    sprite.setTint(0x00aaff);
-    sprite.setAlpha(0.5 + 0.5 * (progress / 100));
-
-    if (progress >= 100) {
-      sprite.setTint(0x00ffff);
-      sprite.setAlpha(1);
-    }
   }
 
   /**

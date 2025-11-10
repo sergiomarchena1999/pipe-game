@@ -16,37 +16,27 @@ export class GridCell {
     }
   }
 
-  /**
-   * Gets the pipe currently occupying this cell.
-   */
+  /** Gets the pipe currently occupying this cell. */
   get pipe(): Pipe | null {
     return this._pipe;
   }
 
-  /**
-   * Places a pipe in this cell, replacing any existing pipe.
-   */
+  /** Places a pipe in this cell, replacing any existing pipe. */
   setPipe(pipe: Pipe): void {
     this._pipe = pipe;
   }
 
-  /**
-   * Removes any pipe from this cell.
-   */
+  /** Removes any pipe from this cell. */
   clearPipe(): void {
     this._pipe = null;
   }
 
-  /**
-   * Checks if this cell is currently empty.
-   */
+  /** Checks if this cell is currently empty. */
   isEmpty(): boolean {
     return this._pipe === null;
   }
 
-  /**
-   * Returns a string representation of this cell's position.
-   */
+  /** Returns a string representation of this cell's position. */
   toString(): string {
     return `(${this.x}, ${this.y})`;
   }

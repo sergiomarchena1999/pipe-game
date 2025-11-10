@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { PhaserAssetLoader } from "./PhaserAssetLoader";
 import { AssetRenderer } from "./AssetRenderer";
 import { InputManager } from "./InputManager";
-import { FlowNetwork } from "../../core/FlowNetwork";
 
 import type { IPhaserScene } from "./IPhaserScene";
 import type { IGameConfig } from "../../config/GameConfig";
@@ -53,10 +52,6 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     this.state.update(deltaTime);
 
     this.assetRenderer.renderFlowPreview();
-
-    for (const visitedPort of FlowNetwork.getVisitedPortsSnapshot()) {
-      this.assetRenderer.updatePipeFlow(visitedPort.pipe);
-    }
   }
 
   /** Sets up event listeners for game state changes. */

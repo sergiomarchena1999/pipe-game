@@ -6,7 +6,7 @@ import type { Pipe } from "./Pipe";
 
 interface ActivePipeState {
   pipe: Pipe;
-  entryDir: Direction;
+  entryDir: Direction | null;
   exitDir: Direction | null;
   progress: number;       // 0–100
   delayRemaining: number; // seconds
@@ -23,7 +23,7 @@ export class FlowNetwork {
 
     this.activeStates = [{
       pipe: startPipe,
-      entryDir: startPipe.direction,
+      entryDir: null,
       exitDir: startPipe.getOpenPorts()[0],
       progress: 0,
       delayRemaining: startDelaySeconds,
@@ -43,19 +43,37 @@ export class FlowNetwork {
         continue;
       }
 
-      if (!state.exitDir) {
+      // ensure we know the exit direction for this pipe (may be null if dead-end)
+      if (state.entryDir && !state.exitDir) {
         state.exitDir = this.getNextExit(state.pipe, state.entryDir);
-        if (!state.exitDir) continue;
       }
 
-      // advance progress
+      const prevProgress = state.progress;
       state.progress += speed * delta;
+
+      // MARK ENTRY when the pipe reaches 50% filled (first time crossing 50%)
+      if (state.entryDir && prevProgress < 50 && state.progress >= 50) {
+        // mark the entry port as visited
+        this.addVisited(state.pipe, state.entryDir);
+        state.pipe.markUsed(state.entryDir);
+      }
+
       if (state.progress < 100) {
         newStates.push(state);
         continue;
       }
 
-      // move to next pipe
+      if (prevProgress < 100 && state.progress >= 100 && state.exitDir) {
+        this.addVisited(state.pipe, state.exitDir);
+        state.pipe.markUsed(state.exitDir);
+      }
+
+      // Move to next pipe only if there's a valid exit and a valid neighbor
+      if (!state.exitDir) {
+        // no exit -> flow stops here (do not enqueue a next pipe)
+        continue;
+      }
+
       const nextPos = {
         x: state.pipe.position.x + state.exitDir.dx,
         y: state.pipe.position.y + state.exitDir.dy,
@@ -66,12 +84,7 @@ export class FlowNetwork {
       const nextPipe = grid.getPipeAt(nextPos.x, nextPos.y);
       if (!nextPipe || !nextPipe.accepts(state.exitDir.opposite)) continue;
 
-      state.pipe.markUsed(state.exitDir);
-      nextPipe.markUsed(state.exitDir.opposite);
-      this.addVisited(state.pipe, state.exitDir);
-      this.addVisited(nextPipe, state.exitDir.opposite);
-
-      // enqueue next pipe with no progress and 0 delay
+      // Enqueue next pipe.
       newStates.push({
         pipe: nextPipe,
         entryDir: state.exitDir.opposite,
