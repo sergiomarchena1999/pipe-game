@@ -17,7 +17,7 @@ export interface IGameConfig {
     readonly backgroundColor: string;
   };
   readonly pipeWeights: Record<PipeType, number>;
-  readonly pipeFlowStartDelay: number;
+  readonly flowStartDelaySeconds: number;
   readonly pipeFlowSpeed: number;
 }
 
@@ -73,7 +73,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     throw new Error("Pipe Flow Speed must be positive");
   }
 
-  if (config.pipeFlowStartDelay < 0) {
+  if (config.flowStartDelaySeconds < 0) {
     throw new Error("Pipe Flow Start Delay must be positive");
   }
 
@@ -92,7 +92,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     grid: Object.freeze({ ...config.grid }),
     canvas: Object.freeze({ ...config.canvas }),
     pipeWeights: Object.freeze({ ...config.pipeWeights }),
-    pipeFlowStartDelay: config.pipeFlowStartDelay,
+    flowStartDelaySeconds: config.flowStartDelaySeconds,
     pipeFlowSpeed: config.pipeFlowSpeed
   });
 }
@@ -119,6 +119,6 @@ export const GameConfig: IGameConfig = createGameConfig({
     [PipeType.Corner]: 0.55,
     [PipeType.Cross]: 0.20,
   },
-  pipeFlowStartDelay: 1000,
+  flowStartDelaySeconds: 10,
   pipeFlowSpeed: 20,
 });

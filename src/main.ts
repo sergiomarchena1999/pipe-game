@@ -18,22 +18,6 @@ function initializeApplication(): void {
       (window as any).game = game;
     }
 
-    // --- GAME LOOP ---
-    let lastTime = performance.now();
-    const loop = (time: number) => {
-      const delta = time - lastTime;
-      lastTime = time;
-
-      if (game.running) {
-        game.update(delta);
-      }
-
-      requestAnimationFrame(loop);
-    };
-
-    requestAnimationFrame(loop);
-    // --- END LOOP ---
-
     logger.info("Application initialized successfully");
   } catch (error) {
     logger.error("Failed to initialize application", error);

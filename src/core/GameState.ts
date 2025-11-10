@@ -1,15 +1,17 @@
 import { EventEmitter } from "eventemitter3";
 import type { IGameConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
-import { WaterFlowManager } from "./WaterFlow";
+
+import { WaterFlowManager } from "./WaterFlowManager";
+import { ScoreController } from "./ScoreController";
 import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
 
 
 interface GameStateEvents {
-  initialized: [Grid];
-  stopped: [];
+  initialized: (grid: Grid) => void;
+  stopped: () => void;
 }
 
 /**
@@ -19,6 +21,7 @@ interface GameStateEvents {
 export class GameState extends EventEmitter<GameStateEvents> {
   private readonly _grid: Grid;
   private readonly _queue: PipeQueue;
+  private readonly _score: ScoreController;
   private isInitialized = false;
 
   constructor(
@@ -30,6 +33,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
     // Create queue and grid immediately
     this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
     this._grid = new Grid(this.config.grid.width, this.config.grid.height, this.logger);
+    this._score = new ScoreController(this._grid, this.logger);
 
     this.logger.debug("GameState constructed — grid and queue created.");
   }
@@ -42,6 +46,11 @@ export class GameState extends EventEmitter<GameStateEvents> {
   /** Gets the pipe queue. */
   get queue(): PipeQueue {
     return this._queue;
+  }
+  
+  /** Gets the score controller. */
+  get score(): ScoreController {
+    return this._score;
   }
 
   /**
@@ -60,7 +69,11 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
       this.emit("initialized", this._grid);
 
-      WaterFlowManager.startFlow(this.config.pipeFlowStartDelay);
+      const startPipe = this._grid.startPipe;
+      if (startPipe) {
+        startPipe.flow.startFilling(startPipe.direction, this.config.flowStartDelaySeconds);
+      }
+
       this.logger.info("GameState started successfully");
     } catch (error) {
       this.logger.error("Failed to start GameState", error);
@@ -68,23 +81,19 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
   }
 
+  /** Updates the game state (called every frame). */
   update(deltaTime: number): void {
-    WaterFlowManager.update(
-      deltaTime,
-      this._grid,
-      this.logger,
-      this.config.pipeFlowSpeed
-    );
+    WaterFlowManager.update(deltaTime, this.config.pipeFlowSpeed);
   }
-  /**
-   * Stops the game state and notifies listeners.
-   */
+
+  /** Stops the game state and notifies listeners. */
   stop(): void {
     if (!this.isInitialized) {
       this.logger.warn("GameState not initialized. Nothing to stop.");
       return;
     }
 
+    WaterFlowManager.reset(this.logger);
     this.emit("stopped");
     this.isInitialized = false;
     this.logger.info("GameState stopped");
@@ -100,28 +109,23 @@ export class GameState extends EventEmitter<GameStateEvents> {
       return null;
     }
 
-    // Validate bounds
-    if (!this._grid.isValidPosition(x, y)) {
-      this.logger.debug(`Attempt to place pipe out of bounds: (${x}, ${y})`);
-      return null;
-    }
-
-    // Validate emptiness
-    if (!this._grid.isCellEmpty(x, y)) {
-      this.logger.debug(`Attempt to place pipe in non-empty cell: (${x}, ${y})`);
+    // Validate placement
+    if (!this._grid.isValidPosition(x, y) || !this._grid.isCellEmpty(x, y)) {
+      this.logger.debug(`Cannot place pipe at (${x}, ${y})`);
       return null;
     }
 
     try {
-      const queued = this._queue!.dequeue();
+      const queued = this._queue.dequeue();
       const cell = this._grid.getCell(x, y);
       const pipe = new Pipe(queued.type, cell, queued.direction);
       this._grid.setPipe(x, y, pipe);
 
       this.logger.info(`Placed pipe ${queued.type} at (${x}, ${y}) dir=${queued.direction}`);
+      if (this._grid.isConnectedToNetwork(pipe)) {
+        this._score.updateScore();
+      }
 
-      WaterFlowManager.tryAdvance(this._grid, this.logger);
-      this.logger.info(`Water flow updated: ${WaterFlowManager.count} connected cells.`);
       return pipe;
     } catch (err) {
       this.logger.error("Failed to place next pipe", err);
@@ -129,9 +133,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
   }
 
-  /**
-   * Outputs a debug summary of the current game state.
-   */
+  /** Outputs a debug summary of the current game state. */
   debugSummary(): void {
     const queueContents = this._queue.contents
       .map(p => `${p.type}(${p.direction})`)

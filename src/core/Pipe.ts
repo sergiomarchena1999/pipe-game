@@ -1,5 +1,6 @@
 import type { GridCell } from "./GridCell";
 import { Direction } from "./Direction";
+import { PipeFlow } from "./PipeFlow";
 
 
 /**
@@ -12,24 +13,20 @@ export enum PipeType {
   Start = "start",
 }
 
-export type WaterFlowState =
-  | { status: "empty" }
-  | { status: "delayed"; remaining: number } 
-  | { status: "inProgress"; progress: number } // 0–100
-  | { status: "full" };
-
 /**
  * Represents a single pipe piece on the grid.
  * Immutable after construction to prevent invalid states.
  */
 export class Pipe {
-  private flowState: WaterFlowState = { status: "empty" };
+  public readonly flow: PipeFlow;
 
   constructor(
     public readonly type: PipeType,
     public readonly position: GridCell,
     public readonly direction: Direction
-  ) {}
+  ) {
+    this.flow = new PipeFlow(this);
+  }
 
   /**
    * Gets all open connection directions for this pipe.
@@ -83,65 +80,19 @@ export class Pipe {
     return assetKeyMap[this.type] ?? "pipe-unknown";
   }
 
-  /** Returns current water state. */
-  getFlowState(): WaterFlowState {
-    return this.flowState;
-  }
+  /** Determines the exit direction given an entry direction */
+  getExitDirection(entryDir: Direction): Direction | null {
+    if (this.type === PipeType.Start) return this.direction;
+    if (this.type === PipeType.Cross) return entryDir.opposite;
 
-  /** Update call handles delay countdown and filling logic. */
-  update(deltaTime: number, flowSpeed: number): void {
-    switch (this.flowState.status) {
-      case "delayed":
-        const remaining = this.flowState.remaining - deltaTime;
-        if (remaining <= 0) {
-          this.flowState = { status: "inProgress", progress: 0 };
-        } else {
-          this.flowState = { status: "delayed", remaining };
-        }
-        break;
-
-      case "inProgress":
-        const deltaProgress = (flowSpeed * deltaTime) / 1000;
-        this.advanceFlow(deltaProgress);
-        break;
+    const connections = this.getConnections();
+    if (!connections.includes(entryDir)) {
+      return null; // Can't enter from this direction
     }
-  }
 
-  /** Starts filling this pipe, optionally after a delay. */
-  startFilling(startDelayMs = 0): void {
-    if (!this.isEmpty()) return;
-
-    if (startDelayMs > 0) {
-      this.flowState = { status: "delayed", remaining: startDelayMs };
-    } else {
-      this.flowState = { status: "inProgress", progress: 0 };
-    }
-  }
-
-  /** Advances flow by delta percentage, clamped to 100%. */
-  private advanceFlow(delta: number): void {
-    if (this.flowState.status !== "inProgress") return;
-
-    const newProgress = Math.min(100, this.flowState.progress + delta);
-    this.flowState =
-      newProgress >= 100
-        ? { status: "full" }
-        : { status: "inProgress", progress: newProgress };
-
-    console.warn(this.flowState);
-  }
-
-  /** Convenience checks. */
-  isEmpty(): boolean {
-    return this.flowState.status === "empty";
-  }
-
-  isFull(): boolean {
-    return this.flowState.status === "full";
-  }
-
-  isFilling(): boolean {
-    return this.flowState.status === "inProgress";
+    // For other pipes, find the other connection
+    const exits = connections.filter(d => d !== entryDir);
+    return exits.length > 0 ? exits[0] : null;
   }
 
   /** Returns a string representation for debugging. */

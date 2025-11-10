@@ -13,8 +13,8 @@ export class Grid {
   private _startPipe: Pipe | null = null;
 
   constructor(
-    private readonly width: number,
-    private readonly height: number,
+    public readonly width: number,
+    public readonly height: number,
     private readonly logger: ILogger
   ) {
     this.validateDimensions(width, height);
@@ -97,6 +97,29 @@ export class Grid {
    */
   isValidPosition(x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < this.width && y < this.height;
+  }
+
+  /**
+   * Returns true if this pipe is connected to at least one adjacent pipe.
+   */
+  isConnectedToNetwork(pipe: Pipe): boolean {
+    const { x, y } = pipe.position;
+
+    for (const dir of pipe.getConnections()) {
+      const nx = x + dir.dx;
+      const ny = y + dir.dy;
+
+      if (!this.isValidPosition(nx, ny)) continue;
+
+      const neighbor = this.getPipeAt(nx, ny);
+      if (!neighbor) continue;
+
+      if (neighbor.getConnections().includes(dir.opposite)) {
+        return true; // connected to the existing network
+      }
+    }
+
+    return false;
   }
 
   /**

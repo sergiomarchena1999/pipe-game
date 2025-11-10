@@ -28,7 +28,7 @@ export class Logger implements ILogger {
 
   debug(message: string): void {
     if (!this.shouldLog("debug")) return;
-    console.debug(`%c[${this.context}] ${message}`, "color: gray");
+    console.log(`%c[${this.context}] ${message}`, "color: gray");
   }
 
   info(message: string): void {

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PhaserAssetLoader } from "./PhaserAssetLoader";
+import { WaterFlowManager } from "../../core/WaterFlowManager";
 import { AssetRenderer } from "./AssetRenderer";
 import { InputManager } from "./InputManager";
 
@@ -7,7 +8,6 @@ import type { IPhaserScene } from "./IPhaserScene";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { GameState } from "../../core/GameState";
 import type { ILogger } from "../../core/logging/ILogger";
-import { WaterFlowManager } from "../../core/WaterFlow";
 
 
 /**

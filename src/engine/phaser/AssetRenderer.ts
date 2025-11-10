@@ -1,9 +1,9 @@
+import { WaterFlowManager } from "../../core/WaterFlowManager";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { ILogger } from "../../core/logging/ILogger";
 import type { GridCell } from "../../core/GridCell";
 import type { PipeQueue } from "../../core/PipeQueue";
-import type { Pipe, WaterFlowState } from "../../core/Pipe";
-import { WaterFlowManager } from "../../core/WaterFlow";
+import type { Pipe } from "../../core/Pipe";
 
 
 /**
@@ -54,46 +54,52 @@ export class AssetRenderer {
   }
 
   renderFlowPreview(): void {
-    const flow = WaterFlowManager;
-    const last = flow.last;
-    const pipes = flow.pipes;
+    if (!this.flowGraphics) return;
 
-    if (!last || pipes.length < 2 || !this.flowGraphics) return;
-
-    // Clear old frame
     this.flowGraphics.clear();
 
-    for (let i = 0; i < pipes.length - 2; i++) {
-      const from = this.gridToWorld(pipes[i].position.x, pipes[i].position.y);
-      const to = this.gridToWorld(pipes[i + 1].position.x, pipes[i + 1].position.y);
+    const pipes = WaterFlowManager.pipes;
+    if (pipes.length === 0) return;
 
-      this.flowGraphics.lineBetween(from.worldX, from.worldY, to.worldX, to.worldY);
+    for (const pipe of pipes) {
+      const center = this.gridToWorld(pipe.position.x, pipe.position.y);
+
+      const entryDir = pipe.flow.getEntryDirection();
+      const exitDir = pipe.flow.getExitDirection();
+
+      // Skip pipes that haven't started flowing
+      if (!entryDir && !exitDir) continue;
+
+      // Compute entry and exit points (edges of the cell)
+      const { cellSize } = this.config.grid;
+      const half = cellSize / 2;
+
+      let entryPoint = { worldX: center.worldX, worldY: center.worldY };
+      if (entryDir) {
+        entryPoint = {
+          worldX: center.worldX + entryDir.dx * half,
+          worldY: center.worldY + entryDir.dy * half
+        };
+      }
+
+      let exitPoint = { worldX: center.worldX, worldY: center.worldY };
+      if (exitDir) {
+        exitPoint = {
+          worldX: center.worldX + exitDir.dx * half,
+          worldY: center.worldY + exitDir.dy * half
+        };
+      }
+
+      // Draw entry-to-center line
+      if (entryDir) {
+        this.flowGraphics.lineBetween(entryPoint.worldX, entryPoint.worldY, center.worldX, center.worldY);
+      }
+
+      // Draw center-to-exit line
+      if (exitDir) {
+        this.flowGraphics.lineBetween(center.worldX, center.worldY, exitPoint.worldX, exitPoint.worldY);
+      }
     }
-
-    if (!last.isFilling()) return;
-
-    // Get previous pipe in path
-    const prev = pipes[pipes.length - 2];
-
-    // Convert both positions to world space
-    const from = this.gridToWorld(prev.position.x, prev.position.y);
-    const to = this.gridToWorld(last.position.x, last.position.y);
-
-    // Get progress of filling (0–1)
-    const flowState = last.getFlowState() as WaterFlowState;
-    if (flowState.status !== "inProgress") return;
-    const progressPercent = flowState.progress / 100;
-
-    // Interpolate end point
-    const midX = Phaser.Math.Linear(from.worldX, to.worldX, progressPercent);
-    const midY = Phaser.Math.Linear(from.worldY, to.worldY, progressPercent);
-
-    // Draw line segment showing water movement
-    this.flowGraphics.lineStyle(6, 0x00bfff, 1);
-    this.flowGraphics.beginPath();
-    this.flowGraphics.moveTo(from.worldX, from.worldY);
-    this.flowGraphics.lineTo(midX, midY);
-    this.flowGraphics.strokePath();
   }
 
   renderPipe(pipe: Pipe): void {
@@ -139,14 +145,14 @@ export class AssetRenderer {
     const sprite = this.pipeSprites.get(pipe.position);
     if (!sprite) return;
 
-    const state = pipe.getFlowState();
+    const state = pipe.flow.getState();
     switch (state.status) {
       case "empty":
         sprite.setTint(0xffffff);
         sprite.setAlpha(0.5);
         break;
 
-      case "inProgress":
+      case "filling":
         sprite.setTint(0x00aaff);
         sprite.setAlpha(0.5 + 0.5 * (state.progress / 100)); // fades in as it fills
         break;
