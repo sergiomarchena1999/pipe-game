@@ -50,6 +50,15 @@ export class Direction {
     }
   }
 
+  /** Returns a Direction instance that matches the given angle (0, 90, 180, 270). */
+  static fromAngle(angle: number): Direction {
+    const normalized = ((angle % 360) + 360) % 360;
+    for (const d of Direction.All) {
+      if (d.angle === normalized) return d;
+    }
+    throw new Error(`No direction with angle ${angle}`);
+  }
+
   /** Returns a new coordinate offset from (x, y) in this direction. */
   offset(x: number, y: number): { x: number; y: number } {
     return { x: x + this.dx, y: y + this.dy };

@@ -1,4 +1,4 @@
-import { PipeType } from "../core/Pipe";
+import { PipeType } from "../core/constants/PipeShapes";
 
 
 /**

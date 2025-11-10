@@ -42,13 +42,7 @@ export class InputManager {
       }
 
       this.renderer.renderPipe(placed);
-      placed.flow.on("flowReached50", () => {
-        this.renderer.renderFlowPreview();
-      });
-
-      placed.flow.on("flowCompleted", () => {
-        this.renderer.renderFlowPreview();
-      });
+      this.renderer.renderFlowPreview();
     } catch (err) {
       this.logger.error("Error during grid click", err);
     }

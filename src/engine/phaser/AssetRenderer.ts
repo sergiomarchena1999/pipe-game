@@ -1,9 +1,9 @@
-import { WaterFlowManager } from "../../core/WaterFlowManager";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { ILogger } from "../../core/logging/ILogger";
 import type { GridCell } from "../../core/GridCell";
 import type { PipeQueue } from "../../core/PipeQueue";
 import type { Pipe } from "../../core/Pipe";
+import { FlowNetwork } from "../../core/FlowNetwork";
 
 
 /**
@@ -58,47 +58,67 @@ export class AssetRenderer {
 
     this.flowGraphics.clear();
 
-    const pipes = WaterFlowManager.pipes;
-    if (pipes.length === 0) return;
+    const { cellSize } = this.config.grid;
+    const half = cellSize / 2;
 
-    for (const pipe of pipes) {
+    // 1) Draw completed/visited ports (bright / full)
+    const visited = FlowNetwork.getVisitedPortsSnapshot();
+    for (const entry of visited) {
+      const pipe = entry.pipe;
       const center = this.gridToWorld(pipe.position.x, pipe.position.y);
 
-      const entryDir = pipe.flow.getEntryDirection();
-      const exitDir = pipe.flow.getExitDirection();
+      for (const dir of entry.dirs) {
+        const endX = center.worldX + dir.dx * half;
+        const endY = center.worldY + dir.dy * half;
 
-      // Skip pipes that haven't started flowing
-      if (!entryDir && !exitDir) continue;
+        // draw center -> edge (completed)
+        this.flowGraphics.lineStyle(4, 0x00ffff, 1); // full cyan
+        this.flowGraphics.lineBetween(center.worldX, center.worldY, endX, endY);
+      }
+    }
 
-      // Compute entry and exit points (edges of the cell)
-      const { cellSize } = this.config.grid;
-      const half = cellSize / 2;
+    // 2) Draw active partial fills (animated)
+    const { pipe, entryDir, exitDir, progress } = FlowNetwork.getActiveState();
+    const center = this.gridToWorld(pipe.position.x, pipe.position.y);
 
-      let entryPoint = { worldX: center.worldX, worldY: center.worldY };
-      if (entryDir) {
-        entryPoint = {
-          worldX: center.worldX + entryDir.dx * half,
-          worldY: center.worldY + entryDir.dy * half
+    // compute entry point (edge)
+    const entryPoint = {
+      x: center.worldX + entryDir.dx * half,
+      y: center.worldY + entryDir.dy * half,
+    };
+
+    // if exit known, animate from entry edge -> exit edge proportional to progress
+    if (exitDir) {
+      // fraction from entry edge through center to exit edge:
+      // 0..50% -> entry edge -> center, 50..100% -> center -> exit edge
+      if (progress <= 50) {
+        const t = progress / 50; // 0..1 entryEdge -> center
+        const ix = entryPoint.x + (center.worldX - entryPoint.x) * t;
+        const iy = entryPoint.y + (center.worldY - entryPoint.y) * t;
+        this.flowGraphics.lineStyle(3, 0x0088ff, 1);
+        this.flowGraphics.lineBetween(entryPoint.x, entryPoint.y, ix, iy);
+      } else {
+        // draw full from entry edge to center (already may be drawn by visited), plus partial to exit
+        const t = (progress - 50) / 50; // 0..1 center -> exitEdge
+        const exitEdge = {
+          x: center.worldX + exitDir.dx * half,
+          y: center.worldY + exitDir.dy * half,
         };
-      }
+        const ix = center.worldX + (exitEdge.x - center.worldX) * t;
+        const iy = center.worldY + (exitEdge.y - center.worldY) * t;
 
-      let exitPoint = { worldX: center.worldX, worldY: center.worldY };
-      if (exitDir) {
-        exitPoint = {
-          worldX: center.worldX + exitDir.dx * half,
-          worldY: center.worldY + exitDir.dy * half
-        };
+        // ensure center -> partial exit is drawn
+        this.flowGraphics.lineStyle(3, 0x0088ff, 1);
+        this.flowGraphics.lineBetween(center.worldX, center.worldY, ix, iy);
       }
+    } else {
+      // exit unknown -> animate from entry edge toward center only
+      const t = Math.min(1, progress / 100);
+      const ix = entryPoint.x + (center.worldX - entryPoint.x) * t;
+      const iy = entryPoint.y + (center.worldY - entryPoint.y) * t;
 
-      // Draw entry-to-center line
-      if (entryDir) {
-        this.flowGraphics.lineBetween(entryPoint.worldX, entryPoint.worldY, center.worldX, center.worldY);
-      }
-
-      // Draw center-to-exit line
-      if (exitDir) {
-        this.flowGraphics.lineBetween(center.worldX, center.worldY, exitPoint.worldX, exitPoint.worldY);
-      }
+      this.flowGraphics.lineStyle(3, 0x0088ff, 1);
+      this.flowGraphics.lineBetween(entryPoint.x, entryPoint.y, ix, iy);
     }
   }
 
@@ -145,22 +165,20 @@ export class AssetRenderer {
     const sprite = this.pipeSprites.get(pipe.position);
     if (!sprite) return;
 
-    const state = pipe.flow.getState();
-    switch (state.status) {
-      case "empty":
-        sprite.setTint(0xffffff);
-        sprite.setAlpha(0.5);
-        break;
+    const state = FlowNetwork.getActiveState();
+    if (!state) {
+      sprite.setTint(0xffffff);
+      sprite.setAlpha(0.5);
+      return;
+    }
 
-      case "filling":
-        sprite.setTint(0x00aaff);
-        sprite.setAlpha(0.5 + 0.5 * (state.progress / 100)); // fades in as it fills
-        break;
+    const progress = state.progress;
+    sprite.setTint(0x00aaff);
+    sprite.setAlpha(0.5 + 0.5 * (progress / 100));
 
-      case "full":
-        sprite.setTint(0x00ffff);
-        sprite.setAlpha(1);
-        break;
+    if (progress >= 100) {
+      sprite.setTint(0x00ffff);
+      sprite.setAlpha(1);
     }
   }
 

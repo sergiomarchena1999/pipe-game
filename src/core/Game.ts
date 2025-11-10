@@ -31,11 +31,11 @@ export class Game {
     try {
       this.state.start();
       await this.engine.initialize("app", GameConfig, this.state, this.logger);
-      
+
       this.isRunning = true;
       this.state.emit("initialized", this.state.grid);
       this.state.debugSummary();
-      
+
       this.logger.info("Game started successfully");
     } catch (error) {
       this.logger.error("Failed to start game", error);
@@ -57,7 +57,7 @@ export class Game {
       this.engine.destroy();
       this.state.stop();
       this.isRunning = false;
-      
+
       this.logger.info("Game stopped successfully");
     } catch (error) {
       this.logger.error("Error during game shutdown", error);

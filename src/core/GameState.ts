@@ -2,8 +2,8 @@ import { EventEmitter } from "eventemitter3";
 import type { IGameConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
 
-import { WaterFlowManager } from "./WaterFlowManager";
 import { ScoreController } from "./ScoreController";
+import { FlowNetwork } from "./FlowNetwork";
 import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
@@ -64,15 +64,10 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
     try {
       this._grid.initialize();
-      WaterFlowManager.initialize(this._grid, this.logger);
+      FlowNetwork.initialize(this._grid, this.logger, this.config.flowStartDelaySeconds);
       this.isInitialized = true;
 
       this.emit("initialized", this._grid);
-
-      const startPipe = this._grid.startPipe;
-      if (startPipe) {
-        startPipe.flow.startFilling(startPipe.direction, this.config.flowStartDelaySeconds);
-      }
 
       this.logger.info("GameState started successfully");
     } catch (error) {
@@ -83,7 +78,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
   /** Updates the game state (called every frame). */
   update(deltaTime: number): void {
-    WaterFlowManager.update(deltaTime, this.config.pipeFlowSpeed);
+    FlowNetwork.update(deltaTime, this.config.pipeFlowSpeed, this._grid, this.logger);
   }
 
   /** Stops the game state and notifies listeners. */
@@ -93,7 +88,6 @@ export class GameState extends EventEmitter<GameStateEvents> {
       return;
     }
 
-    WaterFlowManager.reset(this.logger);
     this.emit("stopped");
     this.isInitialized = false;
     this.logger.info("GameState stopped");
@@ -118,10 +112,10 @@ export class GameState extends EventEmitter<GameStateEvents> {
     try {
       const queued = this._queue.dequeue();
       const cell = this._grid.getCell(x, y);
-      const pipe = new Pipe(queued.type, cell, queued.direction);
+      const pipe = new Pipe(cell, queued.shape, queued.direction);
       this._grid.setPipe(x, y, pipe);
 
-      this.logger.info(`Placed pipe ${queued.type} at (${x}, ${y}) dir=${queued.direction}`);
+      this.logger.info(`Placed pipe ${queued.shape.id} at (${x}, ${y}) dir=${queued.direction}`);
       if (this._grid.isConnectedToNetwork(pipe)) {
         this._score.updateScore();
       }
@@ -136,7 +130,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
   /** Outputs a debug summary of the current game state. */
   debugSummary(): void {
     const queueContents = this._queue.contents
-      .map(p => `${p.type}(${p.direction})`)
+      .map(p => `${p.shape.id}(${p.direction})`)
       .join(", ");
     this.logger.debug(`Pipe Queue: [${queueContents}]`);
   }

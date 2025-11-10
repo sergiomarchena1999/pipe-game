@@ -1,23 +1,15 @@
-import type { ILogger } from "./logging/ILogger";
+import { PipeShapes, PipeType, type PipeShape } from "./constants/PipeShapes";
 import { EventEmitter } from "eventemitter3";
 import { Direction } from "./Direction";
-import { PipeType } from "./Pipe";
 
+import type { ILogger } from "./logging/ILogger";
+import type { PipeBase } from "./PipeBase";
 
-/** Represents a pipe entry in the queue (type + direction). */
-export interface QueuedPipe {
-  /** The pipe’s type (straight, curve, cross, start). */
-  readonly type: PipeType;
-  /** The pipe’s direction (right, down, left, up). */
-  readonly direction: Direction;
-  /** The pipe’s asset key. */
-  readonly assetKey: string;
-}
 
 /** Events emitted by the PipeQueue. */
 interface PipeQueueEvents {
-  updated: [readonly QueuedPipe[]];
-  dequeued: [QueuedPipe];
+  updated: [readonly PipeBase[]];
+  dequeued: [PipeBase];
 }
 
 /**
@@ -25,11 +17,11 @@ interface PipeQueueEvents {
  * Emits events for UI or logic to react to.
  */
 export class PipeQueue extends EventEmitter<PipeQueueEvents> {
-  private readonly queue: QueuedPipe[] = [];
+  private readonly queue: PipeBase[] = [];
 
   constructor(
     private readonly logger: ILogger,
-    private readonly weights: Record<PipeType, number>,
+    private readonly weights: Record<string, number>,
     private readonly maxSize: number
   ) {
     super();
@@ -39,7 +31,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
   /**
    * Gets the current contents of the queue (read-only).
    */
-  get contents(): readonly QueuedPipe[] {
+  get contents(): readonly PipeBase[] {
     return this.queue;
   }
 
@@ -47,7 +39,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
    * Removes and returns the next pipe from the queue.
    * Automatically refills the queue afterward.
    */
-  dequeue(): QueuedPipe {
+  dequeue(): PipeBase {
     if (this.queue.length === 0) {
       this.logger.warn("PipeQueue is empty — regenerating.");
       this.fillQueue();
@@ -77,36 +69,35 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
    * Randomly generates a pipe and adds it to the queue.
    */
   private enqueueRandomPipe(): void {
-    const type = this.getRandomPipeType()
-    const pipe: QueuedPipe = {
-      type,
+    const shape = this.getRandomPipeShape();
+    const pipe: PipeBase = {
+      shape,
       direction: this.getRandomDirection(),
-      assetKey: `pipe-${type}`
+      assetKey: `pipe-${shape.id}`
     };
+
     this.queue.push(pipe);
-    this.logger.debug(`Enqueued new pipe: ${pipe.type} (${pipe.direction})`);
+    this.logger.debug(`Enqueued new pipe: ${pipe.shape.id} (${pipe.direction})`);
   }
 
-
-    /**
-   * Selects a random non-start pipe type using weighted probabilities.
-   */
-  private getRandomPipeType(): PipeType {
+  /** Selects a random pipe shape based on weights. */
+  private getRandomPipeShape(): PipeShape {
     const entries = Object.entries(this.weights) as [PipeType, number][];
     const total = entries.reduce((sum, [, w]) => sum + w, 0);
     let random = Math.random() * total;
 
-    for (const [type, weight] of entries) {
+    for (const [id, weight] of entries) {
       random -= weight;
-      if (random <= 0) return type;
+      if (random <= 0) return PipeShapes[id];
     }
 
-    // Fallback (shouldn't happen if validation passed)
-    return entries[0][0];
+    return PipeShapes[entries[0][0]]; // fallback
   }
 
+  /** Returns a random valid rotation/direction for the shape */
   private getRandomDirection(): Direction {
-    const randomIndex = Math.floor(Math.random() * Direction.All.length);
-    return Direction.All[randomIndex];
+    // Only pick from allowed directions for rotation if needed
+    const index = Math.floor(Math.random() * Direction.All.length);
+    return Direction.All[index];
   }
 }

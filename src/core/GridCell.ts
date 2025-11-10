@@ -45,17 +45,6 @@ export class GridCell {
   }
 
   /**
-   * Serializes cell data for debugging or persistence.
-   */
-  toJSON(): { x: number; y: number; hasPipe: boolean } {
-    return { 
-      x: this.x, 
-      y: this.y, 
-      hasPipe: this._pipe !== null 
-    };
-  }
-
-  /**
    * Returns a string representation of this cell's position.
    */
   toString(): string {

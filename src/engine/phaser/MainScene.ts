@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 import { PhaserAssetLoader } from "./PhaserAssetLoader";
-import { WaterFlowManager } from "../../core/WaterFlowManager";
 import { AssetRenderer } from "./AssetRenderer";
 import { InputManager } from "./InputManager";
+import { FlowNetwork } from "../../core/FlowNetwork";
 
 import type { IPhaserScene } from "./IPhaserScene";
 import type { IGameConfig } from "../../config/GameConfig";
@@ -27,18 +27,14 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     super({ key: "MainScene" });
   }
 
-  /**
-   * Phaser lifecycle: Load all required assets.
-   */
+  /** Phaser lifecycle: Load all required assets. */
   preload(): void {
     this.assetLoader = new PhaserAssetLoader(this, this.logger);
     this.assetLoader.loadAll();
     this.assetLoader.startLoading();
   }
 
-  /**
-   * Phaser lifecycle: Set up the initial scene.
-   */
+  /** Phaser lifecycle: Set up the initial scene. */
   create(): void {
     this.assetRenderer = new AssetRenderer(this, this.config, this.logger);
     this.inputManager = new InputManager(this, this.state, this.assetRenderer, this.logger);
@@ -56,21 +52,17 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     const deltaTime = delta / 1000; // Phaser gives delta in ms
     this.state.update(deltaTime);
 
-    for (const pipe of WaterFlowManager.pipes) {
-      this.assetRenderer.updatePipeFlow(pipe);
+    this.assetRenderer.renderFlowPreview();
+
+    for (const visitedPort of FlowNetwork.getVisitedPortsSnapshot()) {
+      this.assetRenderer.updatePipeFlow(visitedPort.pipe);
     }
   }
 
-  /**
-   * Sets up event listeners for game state changes.
-   */
+  /** Sets up event listeners for game state changes. */
   private subscribeToGameEvents(): void {
     this.state.once("initialized", (grid) => {
       const startPipe = grid.startPipe;
-      this.logger.info(
-        `Rendering start pipe at (${startPipe.position.x}, ${startPipe.position.y}) ` +
-        `with direction ${startPipe.direction}`
-      );
       this.assetRenderer.renderPipe(startPipe);
     });
   }

@@ -1,7 +1,8 @@
 import type { ILogger } from "./logging/ILogger";
-import { Pipe, PipeType } from "./Pipe";
+import { PipeShapes, PipeType } from "./constants/PipeShapes";
 import { Direction } from "./Direction";
 import { GridCell } from "./GridCell";
+import { Pipe } from "./Pipe";
 
 
 /**
@@ -77,8 +78,8 @@ export class Grid {
    */
   setPipe(x: number, y: number, pipe: Pipe): void {
     this.validatePosition(x, y);
-    (this.cells[y][x] as GridCell).setPipe(pipe);
-    this.logger.debug(`Placed ${pipe.type} at (${x}, ${y}) with direction ${pipe.direction}`);
+    this.cells[y][x].setPipe(pipe);
+    this.logger.debug(`Placed ${pipe} facing ${pipe.direction}`);
   }
 
   /**
@@ -87,7 +88,7 @@ export class Grid {
    */
   removePipe(x: number, y: number): void {
     if (this.isValidPosition(x, y)) {
-      (this.cells[y][x] as GridCell).clearPipe();
+      this.cells[y][x].clearPipe();
       this.logger.debug(`Removed pipe from (${x}, ${y})`);
     }
   }
@@ -105,7 +106,7 @@ export class Grid {
   isConnectedToNetwork(pipe: Pipe): boolean {
     const { x, y } = pipe.position;
 
-    for (const dir of pipe.getConnections()) {
+    for (const dir of pipe.getOpenPorts()) {
       const nx = x + dir.dx;
       const ny = y + dir.dy;
 
@@ -114,8 +115,9 @@ export class Grid {
       const neighbor = this.getPipeAt(nx, ny);
       if (!neighbor) continue;
 
-      if (neighbor.getConnections().includes(dir.opposite)) {
-        return true; // connected to the existing network
+      // Connection is valid if neighbor has a port facing back
+      if (neighbor.hasOpenPort(dir.opposite)) {
+        return true;
       }
     }
 
@@ -161,7 +163,7 @@ export class Grid {
   private createStartPipe(): Pipe {
     const cell = this.selectRandomEmptyCell();
     const direction = this.selectValidStartDirection(cell);
-    const startPipe = new Pipe(PipeType.Start, cell, direction);
+    const startPipe = new Pipe(cell, PipeShapes[PipeType.Start], direction);
 
     this.setPipe(cell.x, cell.y, startPipe);
     return startPipe;

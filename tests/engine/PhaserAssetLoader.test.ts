@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PhaserAssetLoader } from "../../src/engine/phaser/PhaserAssetLoader";
 import type { IPhaserScene } from "../../src/engine/phaser/IPhaserScene";
 
+
 describe("PhaserAssetLoader", () => {
   let mockScene: IPhaserScene;
   let loader: PhaserAssetLoader;
@@ -18,39 +19,33 @@ describe("PhaserAssetLoader", () => {
     loader = new PhaserAssetLoader(mockScene, globalThis.mockLogger);
   });
 
-  it("should load image if not existing", () => {
-    loader.loadImage("pipe", "pipe-straight.png");
+  it("should call load.image for all assets in loadAll", () => {
+    loader.loadAll();
 
-    expect(mockScene.textures.exists).toHaveBeenCalledWith("pipe");
-    expect(mockScene.load.image).toHaveBeenCalledWith("pipe", "pipe-straight.png");
+    expect(mockScene.textures.exists).toHaveBeenCalledTimes(5);
+    expect(mockScene.load.image).toHaveBeenCalledTimes(5);
+
+    expect(mockScene.load.image).toHaveBeenCalledWith("grid-cell", expect.any(String));
+    expect(mockScene.load.image).toHaveBeenCalledWith("pipe-straight", expect.any(String));
+    expect(mockScene.load.image).toHaveBeenCalledWith("pipe-corner", expect.any(String));
+    expect(mockScene.load.image).toHaveBeenCalledWith("pipe-cross", expect.any(String));
+    expect(mockScene.load.image).toHaveBeenCalledWith("pipe-start", expect.any(String));
   });
 
-  it("should skip duplicate textures and log debug", () => {
+  it("should not call load.image if texture already exists", () => {
     (mockScene.textures.exists as any).mockReturnValue(true);
 
-    loader.loadImage("pipe", "pipe-straight.png");
+    loader.loadAll();
 
     expect(mockScene.load.image).not.toHaveBeenCalled();
     expect(globalThis.mockLogger.debug).toHaveBeenCalledWith(
-      "[AssetLoader] Skipped duplicate texture: pipe"
+      expect.stringContaining("Skipped duplicate texture")
     );
   });
 
-  it("should call load.start on startLoading", () => {
+  it("startLoading should call scene.load.start", () => {
     loader.startLoading();
     expect(mockScene.load.start).toHaveBeenCalled();
-  });
-
-  it("should load multiple images via loadImages", () => {
-    const assets = {
-      "pipe-cross": "pipe-cross.png",
-      "pipe-straight": "pipe-straight.png",
-    };
-
-    loader.loadImages(assets);
-
-    for (const [key, path] of Object.entries(assets)) {
-      expect(mockScene.load.image).toHaveBeenCalledWith(key, path);
-    }
+    expect(globalThis.mockLogger.debug).toHaveBeenCalledWith("[AssetLoader] Loader started");
   });
 });
