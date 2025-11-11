@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PhaserAssetLoader } from "./PhaserAssetLoader";
+import { WorldContainer } from "./WorldContainer";
 import { AssetRenderer } from "./AssetRenderer";
 import { InputManager } from "./InputManager";
 
@@ -8,15 +9,12 @@ import type { IGameConfig } from "../../config/GameConfig";
 import type { GameState } from "../../core/GameState";
 import type { ILogger } from "../../core/logging/ILogger";
 
-
-/**
- * Main game scene responsible for rendering the grid and pipes.
- * Subscribes to game state events to update the display.
- */
+/** Main game scene responsible for rendering the grid and pipes. */
 export class MainScene extends Phaser.Scene implements IPhaserScene {
   private assetLoader!: PhaserAssetLoader;
   private assetRenderer!: AssetRenderer;
   private inputManager!: InputManager;
+  private worldContainer!: WorldContainer;
 
   constructor(
     private readonly config: IGameConfig,
@@ -26,17 +24,30 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
     super({ key: "MainScene" });
   }
 
-  /** Phaser lifecycle: Load all required assets. */
   preload(): void {
     this.assetLoader = new PhaserAssetLoader(this, this.logger);
     this.assetLoader.loadAll();
     this.assetLoader.startLoading();
   }
 
-  /** Phaser lifecycle: Set up the initial scene. */
   create(): void {
-    this.assetRenderer = new AssetRenderer(this, this.config, this.logger);
-    this.inputManager = new InputManager(this, this.state, this.assetRenderer, this.logger);
+    // Create world container first - all game elements will be added to this
+    this.worldContainer = new WorldContainer(this, this.config);
+
+    // Pass world container to renderer
+    this.assetRenderer = new AssetRenderer(
+      this, 
+      this.config, 
+      this.worldContainer,
+      this.logger
+    );
+
+    this.inputManager = new InputManager(
+      this, 
+      this.state, 
+      this.assetRenderer, 
+      this.logger
+    );
 
     this.assetRenderer.renderGridBackground(this.state.grid);
     this.subscribeToGameEvents();
@@ -48,17 +59,20 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
   }
 
   update(_time: number, delta: number): void {
-    const deltaTime = delta / 1000; // Phaser gives delta in ms
+    const deltaTime = delta / 1000;
     this.state.update(deltaTime);
-
     this.assetRenderer.renderFlowPreview();
   }
 
-  /** Sets up event listeners for game state changes. */
   private subscribeToGameEvents(): void {
     this.state.once("initialized", (grid) => {
       const startPipe = grid.startPipe;
       this.assetRenderer.renderPipe(startPipe);
     });
+  }
+
+  shutdown(): void {
+    this.worldContainer.destroy();
+    this.assetRenderer.destroy();
   }
 }

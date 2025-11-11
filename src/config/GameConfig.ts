@@ -7,11 +7,6 @@ export interface IGameConfig {
   readonly queueSize: number;
   readonly grid: IGridConfig;
   readonly difficulty: Difficulty;
-  readonly canvas: {
-    readonly width: number;
-    readonly height: number;
-    readonly backgroundColor: string;
-  };
   readonly pipeWeights: Record<PipeType, number>;
   readonly flowStartDelaySeconds: number;
   readonly pipeFlowSpeed: number;
@@ -46,11 +41,6 @@ function validatePipeWeights(weights: Record<PipeType, number>): void {
   }
 }
 
-/** Validates a hex color string. */
-function isValidHexColor(color: string): boolean {
-  return /^#[0-9A-F]{6}$/i.test(color);
-}
-
 /**
  * Creates and validates game configuration.
  * @throws {Error} if configuration is invalid
@@ -80,21 +70,12 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     throw new Error("Pipe Flow Start Delay must be positive");
   }
 
-  if (config.canvas.width <= 0 || config.canvas.height <= 0) {
-    throw new Error("Canvas dimensions must be positive");
-  }
-
   validatePipeWeights(config.pipeWeights);
-
-  if (!isValidHexColor(config.canvas.backgroundColor)) {
-    throw new Error(`Invalid background color: ${config.canvas.backgroundColor}`);
-  }
 
   return Object.freeze({
     queueSize: config.queueSize,
     grid: Object.freeze({ ...config.grid }),
     difficulty: config.difficulty,
-    canvas: Object.freeze({ ...config.canvas }),
     pipeWeights: Object.freeze({ ...config.pipeWeights }),
     flowStartDelaySeconds: config.flowStartDelaySeconds,
     pipeFlowSpeed: config.pipeFlowSpeed
@@ -108,11 +89,4 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
 const selectedDifficulty = Difficulty.Medium;
 const preset = DifficultyConfig.get(selectedDifficulty);
 
-export const GameConfig: IGameConfig = createGameConfig({
-  ...preset,
-  canvas: {
-    width: 800,
-    height: 800,
-    backgroundColor: "#00a187",
-  }
-});
+export const GameConfig: IGameConfig = createGameConfig(preset);

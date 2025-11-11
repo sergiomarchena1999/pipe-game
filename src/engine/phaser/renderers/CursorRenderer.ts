@@ -1,4 +1,4 @@
-import type { CoordinateConverter } from "../../../utils/CoordinateConverter";
+import type { WorldContainer } from "../WorldContainer";
 import type { ILogger } from "../../../core/logging/ILogger";
 
 
@@ -8,7 +8,7 @@ export class CursorRenderer {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly converter: CoordinateConverter,
+    private readonly world: WorldContainer,
     private readonly logger: ILogger
   ) {
     this.createAnimation();
@@ -19,6 +19,7 @@ export class CursorRenderer {
       .setDepth(10)
       .setVisible(false);
     
+    this.world.add(this.gridCursor);
     this.gridCursor.play("grid-cursor-anim");
   }
 
@@ -41,15 +42,14 @@ export class CursorRenderer {
   }
 
   update(worldX: number, worldY: number): void {
-    const gridPos = this.converter.worldToGrid(worldX, worldY);
-    
+    const gridPos = this.world.worldToGrid(worldX, worldY);
     if (!gridPos) {
       this.gridCursor.setVisible(false);
       return;
     }
 
-    const { worldX: x, worldY: y } = this.converter.gridToWorldCorner(gridPos.x, gridPos.y);
-    this.gridCursor.setPosition(x, y).setVisible(true);
+    const pos = this.world.gridToLocalCorner(gridPos.x, gridPos.y);
+    this.gridCursor.setPosition(pos.x, pos.y).setVisible(true);
   }
 
   hide(): void {

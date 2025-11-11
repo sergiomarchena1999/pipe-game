@@ -1,6 +1,8 @@
 import type { ILogger } from "../../core/logging/ILogger";
 import type { IPhaserScene } from "./IPhaserScene";
 
+import tileBackground from "../../assets/tile-background.png";
+
 import gridCell from "../../assets/grid/grid-background.png";
 import gridBlock from "../../assets/grid/grid-block.png";
 import gridBorderSide from "../../assets/grid/grid-border-side.png";
@@ -8,6 +10,9 @@ import gridBorderCorner from "../../assets/grid/grid-border-corner.png";
 
 import gridCursor from "../../assets/grid/grid-cursor.png";
 import gridCursorAlt from "../../assets/grid/grid-cursor-alt.png";
+
+import queueTile from "../../assets/queue/queue-tile.png";
+import queueSelected from "../../assets/queue/queue-selected.png";
 
 import pipeStraight from "../../assets/pipes/pipe-straight.png";
 import pipeCorner from "../../assets/pipes/pipe-corner.png";
@@ -26,12 +31,15 @@ export class PhaserAssetLoader {
    * Maps logical keys to file paths.
    */
   private static readonly ASSETS = {
+    "tile-background": tileBackground,
     "grid-cell": gridCell,
     "grid-block": gridBlock,
     "grid-border-side": gridBorderSide,
     "grid-border-corner": gridBorderCorner,
     "grid-cursor": gridCursor,
     "grid-cursor-alt": gridCursorAlt,
+    "queue-tile": queueTile,
+    "queue-selected": queueSelected,
     "pipe-straight": pipeStraight,
     "pipe-corner": pipeCorner,
     "pipe-cross": pipeCross,

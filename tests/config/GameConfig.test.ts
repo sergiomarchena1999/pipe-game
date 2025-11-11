@@ -7,7 +7,6 @@ describe("GameConfig", () => {
   it("should be fully frozen", () => {
     expect(Object.isFrozen(GameConfig)).toBe(true);
     expect(Object.isFrozen(GameConfig.grid)).toBe(true);
-    expect(Object.isFrozen(GameConfig.canvas)).toBe(true);
     expect(Object.isFrozen(GameConfig.pipeWeights)).toBe(true);
   });
 
@@ -15,12 +14,6 @@ describe("GameConfig", () => {
     expect(GameConfig.grid.width).toBeGreaterThan(0);
     expect(GameConfig.grid.height).toBeGreaterThan(0);
     expect(GameConfig.grid.cellSize).toBeGreaterThan(0);
-  });
-
-  it("canvas settings should be valid", () => {
-    expect(GameConfig.canvas.width).toBeGreaterThan(0);
-    expect(GameConfig.canvas.height).toBeGreaterThan(0);
-    expect(GameConfig.canvas.backgroundColor).toMatch(/^#[0-9A-F]{6}$/i);
   });
 
   it("pipeWeights should be valid", () => {
@@ -43,12 +36,6 @@ describe("GameConfig", () => {
   it("should not allow modification of GameConfig properties", () => {
     expect(() => ((GameConfig as any).queueSize = 10)).toThrow();
     expect(() => ((GameConfig.grid as any).width = 20)).toThrow();
-    expect(() => ((GameConfig.canvas as any).backgroundColor = "#ffffff")).toThrow();
     expect(() => ((GameConfig.pipeWeights as any)[PipeType.Straight] = 0.5)).toThrow();
-  });
-
-  it("background color should be a valid hex code", () => {
-    const color = GameConfig.canvas.backgroundColor;
-    expect(/^#[0-9A-F]{6}$/i.test(color)).toBe(true);
   });
 });

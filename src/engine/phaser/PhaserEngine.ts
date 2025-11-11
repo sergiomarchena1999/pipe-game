@@ -28,7 +28,7 @@ export class PhaserEngine implements IGameEngine {
 
     try {
       const mainScene = new MainScene(config, state, logger);
-      const phaserConfig = this.createPhaserConfig(containerId, config, mainScene);
+      const phaserConfig = this.createPhaserConfig(containerId, mainScene);
 
       this.game = new Phaser.Game(phaserConfig);
 
@@ -57,24 +57,22 @@ export class PhaserEngine implements IGameEngine {
     }
   }
 
-  private createPhaserConfig(containerId: string, config: IGameConfig, scene: Phaser.Scene): Phaser.Types.Core.GameConfig {
+  private createPhaserConfig(containerId: string, scene: Phaser.Scene): Phaser.Types.Core.GameConfig {
     return {
       type: Phaser.AUTO,
-      width: config.canvas.width,
-      height: config.canvas.height,
       parent: containerId,
-      backgroundColor: config.canvas.backgroundColor,
       scene: [scene],
-      physics: { 
+      physics: {
         default: "arcade",
-        arcade: {
-          debug: false
-        }
+        arcade: { debug: false }
       },
-      render: {
-        antialias: true,
-        pixelArt: false,
-      }
+      render: { antialias: true, pixelArt: false },
+      scale: {
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: "100%",
+        height: "100%",
+      },
     };
   }
 

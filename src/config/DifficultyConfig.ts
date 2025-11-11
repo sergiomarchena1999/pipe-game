@@ -13,7 +13,7 @@ export class DifficultyConfig {
    * Returns a preset game configuration for a given difficulty.
    * You can override or merge this with a base config if needed.
    */
-  static get(difficulty: Difficulty): Omit<IGameConfig, "canvas"> {
+  static get(difficulty: Difficulty): Readonly<IGameConfig> {
     switch (difficulty) {
       case Difficulty.Easy:
         return Object.freeze({

@@ -1,4 +1,4 @@
-import { CoordinateConverter } from "../../utils/CoordinateConverter";
+import type { WorldContainer } from "./WorldContainer";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { ILogger } from "../../core/logging/ILogger";
 import type { PipeQueue } from "../../core/PipeQueue";
@@ -17,9 +17,6 @@ import { FlowRenderer } from "./renderers/FlowRenderer";
  * This is a facade that delegates to focused, single-responsibility renderers.
  */
 export class AssetRenderer {
-  // Shared coordinate system
-  public readonly coordinates: CoordinateConverter;
-
   // Specialized renderers
   private readonly gridRenderer: GridRenderer;
   private readonly cursorRenderer: CursorRenderer;
@@ -27,20 +24,18 @@ export class AssetRenderer {
   private readonly queueRenderer: QueueRenderer;
   private readonly flowRenderer: FlowRenderer;
 
-  constructor(scene: Phaser.Scene, config: IGameConfig, private readonly logger: ILogger) {
-    // Initialize coordinate system
-    this.coordinates = new CoordinateConverter(config);
-    
-    this.logger.debug(
-      `AssetRenderer centered grid: offset=(${this.coordinates.offsetX}, ${this.coordinates.offsetY})`
-    );
-
-    // Initialize specialized renderers
-    this.gridRenderer = new GridRenderer(scene, config, this.coordinates, logger);
-    this.cursorRenderer = new CursorRenderer(scene, this.coordinates, logger);
-    this.pipeRenderer = new PipeRenderer(scene, this.coordinates);
-    this.queueRenderer = new QueueRenderer(scene, config, logger);
-    this.flowRenderer = new FlowRenderer(scene, config, this.coordinates);
+  constructor(
+    scene: Phaser.Scene,
+    config: IGameConfig,
+    private readonly worldContainer: WorldContainer,
+    logger: ILogger
+  ) {
+    // Initialize specialized renderers with world container
+    this.gridRenderer = new GridRenderer(scene, config, worldContainer, logger);
+    this.cursorRenderer = new CursorRenderer(scene, worldContainer, logger);
+    this.pipeRenderer = new PipeRenderer(scene, worldContainer);
+    this.queueRenderer = new QueueRenderer(scene, config, worldContainer, logger);
+    this.flowRenderer = new FlowRenderer(scene, config, worldContainer);
   }
 
   renderGridBackground(grid: Grid): void {
@@ -68,11 +63,11 @@ export class AssetRenderer {
   }
 
   worldToGrid(worldX: number, worldY: number): { x: number; y: number } | null {
-    return this.coordinates.worldToGrid(worldX, worldY);
+    return this.worldContainer.worldToGrid(worldX, worldY);
   }
 
-  gridToWorld(x: number, y: number): { worldX: number; worldY: number } {
-    return this.coordinates.gridToWorld(x, y);
+  gridToWorld(x: number, y: number): { x: number; y: number } {
+    return this.worldContainer.gridToLocal(x, y);
   }
 
   /** Clean up all resources */

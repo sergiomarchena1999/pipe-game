@@ -1,4 +1,4 @@
-import type { CoordinateConverter } from "../../../utils/CoordinateConverter";
+import type { WorldContainer } from "../WorldContainer";
 import type { GridCell } from "../../../core/GridCell";
 import type { Pipe } from "../../../core/Pipe";
 
@@ -9,21 +9,18 @@ export class PipeRenderer {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly converter: CoordinateConverter
+    private readonly world: WorldContainer
   ) {}
 
   render(pipe: Pipe): void {
-    const { worldX, worldY } = this.converter.gridToWorld(
-      pipe.position.x,
-      pipe.position.y
-    );
-
+    const pos = this.world.gridToLocal(pipe.position.x, pipe.position.y);
     const sprite = this.scene.add
-      .image(worldX, worldY, pipe.assetKey)
+      .image(pos.x, pos.y, pipe.assetKey)
       .setOrigin(0.5)
       .setRotation(Phaser.Math.DegToRad(pipe.direction.angle))
-      .setDepth(1);
+      .setDepth(5);
 
+    this.world.add(sprite);
     this.pipeSprites.set(pipe.position, sprite);
   }
 
