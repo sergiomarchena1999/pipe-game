@@ -16,11 +16,13 @@ interface ActivePipeState {
 export class FlowNetwork {
   private static activeStates: ActivePipeState[] = [];
   private static visitedPorts = new Map<Pipe, Set<Direction>>();
+  private static grid: Grid;
 
   static initialize(grid: Grid, logger: ILogger, startDelaySeconds = 0) {
     const startPipe = grid.startPipe;
     if (!startPipe) return;
 
+    this.grid = grid;
     this.activeStates = [{
       pipe: startPipe,
       entryDir: null,
@@ -34,7 +36,11 @@ export class FlowNetwork {
   }
 
   static update(delta: number, speed: number, grid: Grid, logger: ILogger) {
+    this.grid = grid;
     const newStates: ActivePipeState[] = [];
+
+    // Shared memo for all active states during this update
+    const memo = new Map<string, { direction: Direction | null; length: number }>();
 
     for (const state of this.activeStates) {
       if (state.delayRemaining > 0) {
@@ -43,17 +49,14 @@ export class FlowNetwork {
         continue;
       }
 
-      // ensure we know the exit direction for this pipe (may be null if dead-end)
       if (state.entryDir && !state.exitDir) {
-        state.exitDir = this.getNextExit(state.pipe, state.entryDir);
+        state.exitDir = this.getNextExit(state.pipe, state.entryDir, logger, memo);
       }
 
       const prevProgress = state.progress;
       state.progress += speed * delta;
 
-      // MARK ENTRY when the pipe reaches 50% filled (first time crossing 50%)
       if (state.entryDir && prevProgress < 50 && state.progress >= 50) {
-        // mark the entry port as visited
         this.addVisited(state.pipe, state.entryDir);
         state.pipe.markUsed(state.entryDir);
       }
@@ -68,11 +71,7 @@ export class FlowNetwork {
         state.pipe.markUsed(state.exitDir);
       }
 
-      // Move to next pipe only if there's a valid exit and a valid neighbor
-      if (!state.exitDir) {
-        // no exit -> flow stops here (do not enqueue a next pipe)
-        continue;
-      }
+      if (!state.exitDir) continue;
 
       const nextPos = {
         x: state.pipe.position.x + state.exitDir.dx,
@@ -85,7 +84,6 @@ export class FlowNetwork {
       const nextPipe = cell.pipe;
       if (!nextPipe || !nextPipe.accepts(state.exitDir.opposite)) continue;
 
-      // Enqueue next pipe.
       newStates.push({
         pipe: nextPipe,
         entryDir: state.exitDir.opposite,
@@ -100,18 +98,27 @@ export class FlowNetwork {
     this.activeStates = newStates;
   }
 
-  private static getNextExit(pipe: Pipe, entryDir: Direction): Direction | null {
+  private static getNextExit(
+    pipe: Pipe,
+    entryDir: Direction,
+    logger: ILogger,
+    memo: Map<string, { direction: Direction | null; length: number }>
+  ): Direction | null {
     const openPorts = pipe.openPorts.filter(d => d !== entryDir);
     if (openPorts.length === 0) return null;
 
     const visited = this.visitedPorts.get(pipe);
-    if (visited && visited.size === 1) {
-      const [entry] = [...visited];
-      const straight = entry.opposite;
-      if (openPorts.includes(straight)) return straight;
+    const availablePorts = openPorts.filter(d => !visited?.has(d));
+    if (availablePorts.length === 1) return availablePorts[0];
+    if (availablePorts.length === 0) return null;
+
+    const { direction, length } = this.calculateLongestPath(pipe, entryDir, new Set(), memo);
+    if (direction) {
+      logger.debug(`Selected exit ${direction.name} from ${pipe.position} (longest path: ${length} steps)`);
+      return direction;
     }
 
-    return openPorts[0];
+    return availablePorts[0];
   }
 
   private static addVisited(pipe: Pipe, dir: Direction) {
@@ -129,5 +136,43 @@ export class FlowNetwork {
       out.push({ pipe, dirs: Array.from(set) });
     }
     return out;
+  }
+
+  private static calculateLongestPath(
+    pipe: Pipe,
+    entryDir: Direction,
+    visitedInPath: Set<Pipe> = new Set(),
+    memo: Map<string, { direction: Direction | null; length: number }>
+  ): { direction: Direction | null; length: number } {
+    const key = `${pipe.position},${entryDir.name}`;
+    if (memo.has(key)) return memo.get(key)!;
+
+    visitedInPath.add(pipe);
+
+    let bestDirection: Direction | null = null;
+    let maxLength = -1;
+
+    const openPorts = pipe.openPorts.filter(d => d !== entryDir);
+
+    for (const exitDir of openPorts) {
+      const nextPos = { x: pipe.position.x + exitDir.dx, y: pipe.position.y + exitDir.dy };
+      const cell = this.grid.tryGetCell(nextPos.x, nextPos.y);
+      if (!cell || cell.blocked || !cell.pipe || !cell.pipe.accepts(exitDir.opposite)) continue;
+
+      const nextPipe = cell.pipe;
+      if (visitedInPath.has(nextPipe)) continue;
+
+      const subVisited = new Set(visitedInPath);
+      const { length: downstreamLength } = this.calculateLongestPath(nextPipe, exitDir.opposite, subVisited, memo);
+
+      if (1 + downstreamLength > maxLength) {
+        maxLength = 1 + downstreamLength;
+        bestDirection = exitDir;
+      }
+    }
+
+    const result = { direction: bestDirection, length: Math.max(0, maxLength) };
+    memo.set(key, result);
+    return result;
   }
 }

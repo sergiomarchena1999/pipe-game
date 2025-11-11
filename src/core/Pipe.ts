@@ -1,4 +1,4 @@
-import { rotateConnections } from "../utils/rotateConnections";
+import { rotateConnections } from "../utils/RotateConnections";
 import type { PipeShape } from "./constants/PipeShapes";
 import type { GridCell } from "./GridCell";
 import { Direction } from "./Direction";
