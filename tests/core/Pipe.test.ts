@@ -17,7 +17,7 @@ describe("Pipe", () => {
       const pipe = new Pipe(cell, PipeShapes.corner, Direction.Down);
 
       // Original corner connections: [Up, Right], rotated 90° clockwise → [Right, Down]
-      const openPorts = pipe.getOpenPorts();
+      const openPorts = pipe.openPorts;
       expect(openPorts).toContain(Direction.Right);
       expect(openPorts).toContain(Direction.Down);
       expect(openPorts.length).toBe(2);
@@ -50,13 +50,13 @@ describe("Pipe", () => {
 
       pipe.markUsed(outDir);
       expect(pipe.hasOpenPort(outDir)).toBe(false);
-      expect(pipe.getOpenPorts()).not.toContain(outDir);
+      expect(pipe.openPorts).not.toContain(outDir);
     });
 
     it("should handle marking all ports used", () => {
       const pipe = new Pipe(cell, PipeShapes.cross, Direction.Up);
-      pipe.getOpenPorts().forEach(dir => pipe.markUsed(dir));
-      expect(pipe.getOpenPorts().length).toBe(0);
+      pipe.openPorts.forEach(dir => pipe.markUsed(dir));
+      expect(pipe.openPorts.length).toBe(0);
       for (const dir of Direction.All) {
         expect(pipe.hasOpenPort(dir)).toBe(false);
       }
@@ -75,7 +75,7 @@ describe("Pipe", () => {
       const pipe = new Pipe(cell, PipeShapes.straight, Direction.Up);
       const str = pipe.toString();
       expect(str).toContain("pipe-straight");
-      for (const dir of pipe.getOpenPorts()) {
+      for (const dir of pipe.openPorts) {
         expect(str).toContain(dir.toString());
       }
       expect(str).toContain("0,0");
@@ -83,7 +83,7 @@ describe("Pipe", () => {
 
     it("should update string after using a port", () => {
       const pipe = new Pipe(cell, PipeShapes.straight, Direction.Up);
-      const dir = pipe.getOpenPorts()[0];
+      const dir = pipe.openPorts[0];
       pipe.markUsed(dir);
       expect(pipe.toString()).not.toContain(dir.toString());
     });
@@ -95,7 +95,7 @@ describe("Pipe", () => {
       const p2 = new Pipe(new GridCell(1, 0), PipeShapes.straight, Direction.Left);
 
       // Find out which directions are open after rotation
-      const outDir = p1.getOpenPorts().find(d => d === Direction.Down || d === Direction.Right);
+      const outDir = p1.openPorts.find(d => d === Direction.Down || d === Direction.Right);
       expect(outDir).toBeDefined();
 
       // Ensure second pipe accepts from the correct direction
@@ -127,9 +127,9 @@ describe("Pipe", () => {
       p3.markUsed(Direction.Up);
 
       // All ports used
-      expect(p1.getOpenPorts().length).toBe(1); // Down is still open
-      expect(p2.getOpenPorts().length).toBe(0);
-      expect(p3.getOpenPorts().length).toBe(0);
+      expect(p1.openPorts.length).toBe(1); // Down is still open
+      expect(p2.openPorts.length).toBe(0);
+      expect(p3.openPorts.length).toBe(0);
     });
   });
 });

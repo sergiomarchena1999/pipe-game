@@ -3,14 +3,14 @@ import { GameConfig } from "../../src/config/GameConfig";
 import { GameState } from "../../src/core/GameState";
 import { Direction } from "../../src/core/Direction";
 import { PipeType } from "../../src/core/constants/PipeShapes";
+import { Pipe } from "../../src/core/Pipe";
 
 
 describe("GameState.placeNextPipe()", () => {
   let state: GameState;
 
   beforeEach(() => {
-    // deterministic pipe selection
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    vi.spyOn(Math, "random").mockReturnValue(0); // deterministic pipe selection
     state = new GameState(GameConfig, globalThis.mockLogger);
     state.start();
   });
@@ -20,12 +20,13 @@ describe("GameState.placeNextPipe()", () => {
   });
 
   /** Helper: find the first empty cell on the grid */
-  function findFirstEmptyCell(): { x: number; y: number } {
+  function findFirstEmptyCell(): { cell: ReturnType<typeof state.grid.getCell> } {
     const { width, height } = GameConfig.grid;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        if (state.grid.isCellEmpty(x, y)) {
-          return { x, y };
+        const cell = state.grid.tryGetCell(x, y);
+        if (cell && state.grid.isCellEmpty(cell)) { // pass the GridCell itself
+          return { cell };
         }
       }
     }
@@ -33,23 +34,23 @@ describe("GameState.placeNextPipe()", () => {
   }
 
   it("should place a pipe on a valid empty cell", () => {
-    const { x, y } = findFirstEmptyCell();
-    const pipe = state.placeNextPipe(x, y);
+    const { cell } = findFirstEmptyCell();
+    const pipe = state.placeNextPipe(cell.x, cell.y);
 
     expect(pipe).not.toBeNull();
     expect(Object.values(PipeType)).toContain(pipe!.shape.id);
     expect(Direction.All).toContain(pipe!.direction);
-    expect(state.grid.getPipeAt(x, y)).toBe(pipe);
+    expect(cell.pipe).toBe(pipe);
     expect(globalThis.mockLogger.info).toHaveBeenCalledWith(
       expect.stringMatching(/Placed pipe/)
     );
   });
 
   it("should not place a pipe on an occupied cell", () => {
-    const { x, y } = findFirstEmptyCell();
-    state.placeNextPipe(x, y);
+    const { cell } = findFirstEmptyCell();
+    state.placeNextPipe(cell.x, cell.y);
 
-    const secondPipe = state.placeNextPipe(x, y);
+    const secondPipe = state.placeNextPipe(cell.x, cell.y);
     expect(secondPipe).toBeNull();
     expect(globalThis.mockLogger.debug).toHaveBeenCalledWith(
       expect.stringMatching(/Cannot place pipe/)
@@ -78,8 +79,8 @@ describe("GameState.placeNextPipe()", () => {
       throw new Error("queue error");
     });
 
-    const { x, y } = findFirstEmptyCell();
-    const pipe = state.placeNextPipe(x, y);
+    const { cell } = findFirstEmptyCell();
+    const pipe = state.placeNextPipe(cell.x, cell.y);
     expect(pipe).toBeNull();
     expect(globalThis.mockLogger.error).toHaveBeenCalledWith(
       "Failed to place next pipe",
@@ -89,26 +90,26 @@ describe("GameState.placeNextPipe()", () => {
 
   it("should dequeue exactly once per successful placement", () => {
     const spy = vi.spyOn((state as any)._queue, "dequeue");
-    const { x, y } = findFirstEmptyCell();
-    state.placeNextPipe(x, y);
+    const { cell } = findFirstEmptyCell();
+    state.placeNextPipe(cell.x, cell.y);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("should not dequeue on invalid placement", () => {
     const spy = vi.spyOn((state as any)._queue, "dequeue");
-    const coords = findFirstEmptyCell();
+    const { cell } = findFirstEmptyCell();
 
-    state.placeNextPipe(coords.x, coords.y); // valid
-    state.placeNextPipe(coords.x, coords.y); // invalid
+    state.placeNextPipe(cell.x, cell.y); // valid
+    state.placeNextPipe(cell.x, cell.y); // invalid
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("should integrate grid and queue correctly", () => {
-    const { x, y } = findFirstEmptyCell();
+    const { cell } = findFirstEmptyCell();
     const queueBefore = ((state as any)._queue).contents.slice();
     const spy = vi.spyOn((state as any)._queue, "dequeue");
 
-    state.placeNextPipe(x, y);
+    state.placeNextPipe(cell.x, cell.y);
 
     const queueAfter = ((state as any)._queue).contents;
     expect(spy).toHaveBeenCalledTimes(1);
@@ -116,38 +117,26 @@ describe("GameState.placeNextPipe()", () => {
   });
 
   it("should place multiple pipes sequentially and update grid correctly", () => {
-    const placedPipes = [];
+    const placedPipes: Array<{ pipe: Pipe; cell: ReturnType<typeof state.grid.getCell> }> = [];
     for (let i = 0; i < 3; i++) {
-      const { x, y } = findFirstEmptyCell();
-      const pipe = state.placeNextPipe(x, y);
+      const { cell } = findFirstEmptyCell();
+      const pipe = state.placeNextPipe(cell.x, cell.y);
       expect(pipe).not.toBeNull();
-      placedPipes.push({ pipe, x, y });
+      placedPipes.push({ pipe: pipe!, cell });
     }
 
-    placedPipes.forEach(({ pipe, x, y }) => {
-      expect(state.grid.getPipeAt(x, y)).toBe(pipe);
+    placedPipes.forEach(({ pipe, cell }) => {
+      expect(cell.pipe).toBe(pipe);
     });
   });
 
   it("should place the first pipe in the queue deterministically", () => {
-    const { x, y } = findFirstEmptyCell();
+    const { cell } = findFirstEmptyCell();
     const nextPipe = (state as any)._queue.contents[0];
-    const placedPipe = state.placeNextPipe(x, y);
+    const placedPipe = state.placeNextPipe(cell.x, cell.y);
 
     expect(placedPipe).not.toBeNull();
     expect(placedPipe!.direction).toBe(nextPipe.direction);
     expect(placedPipe!.shape).toBe(nextPipe.shape);
-  });
-
-  it("should call debugSummary and log the current queue", () => {
-    const spy = vi.spyOn(globalThis.mockLogger, "debug");
-    const { x, y } = findFirstEmptyCell();
-
-    state.placeNextPipe(x, y);
-    state.debugSummary();
-
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringMatching(/Pipe Queue: \[/)
-    );
   });
 });

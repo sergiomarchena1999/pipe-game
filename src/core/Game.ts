@@ -1,7 +1,8 @@
 import type { ILogger } from "./logging/ILogger";
-import { GameState } from "./GameState";
-import { GameConfig } from "../config/GameConfig";
 import { PhaserEngine } from "../engine/phaser/PhaserEngine";
+import { GameConfig } from "../config/GameConfig";
+import { GameState } from "./GameState";
+
 
 /**
  * Main game controller. Orchestrates the game state and rendering engine.
@@ -34,8 +35,6 @@ export class Game {
 
       this.isRunning = true;
       this.state.emit("initialized", this.state.grid);
-      this.state.debugSummary();
-
       this.logger.info("Game started successfully");
     } catch (error) {
       this.logger.error("Failed to start game", error);
@@ -65,9 +64,7 @@ export class Game {
     }
   }
 
-  /**
-   * Gets the current running state of the game.
-   */
+  /** Gets the current running state of the game. */
   get running(): boolean {
     return this.isRunning;
   }

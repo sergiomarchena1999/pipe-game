@@ -2,13 +2,13 @@ import { describe, it, beforeEach, expect, vi } from "vitest";
 import { FlowNetwork } from "../../src/core/FlowNetwork";
 import { Direction } from "../../src/core/Direction";
 
-
 describe("FlowNetwork", () => {
   let loggerMock: any;
   let startPipe: any;
   let pipeA: any;
   let deadEnd: any;
   let gridMock: any;
+  let cellMap: Map<string, any>;
 
   beforeEach(() => {
     loggerMock = { info: vi.fn() };
@@ -16,31 +16,47 @@ describe("FlowNetwork", () => {
     startPipe = {
       position: { x: 0, y: 0 },
       direction: Direction.Right,
-      getOpenPorts: vi.fn(() => [Direction.Right]),
+      openPorts: [Direction.Right],
       accepts: vi.fn(() => true),
       markUsed: vi.fn(),
     };
 
     pipeA = {
       position: { x: 1, y: 0 },
-      getOpenPorts: vi.fn(() => [Direction.Left, Direction.Right]),
+      openPorts: [Direction.Left, Direction.Right],
       accepts: vi.fn((dir: any) => dir === Direction.Left),
       markUsed: vi.fn(),
     };
 
     deadEnd = {
       position: { x: 1, y: 0 },
-      getOpenPorts: vi.fn(() => [Direction.Left]),
+      openPorts: [Direction.Left],
       accepts: vi.fn(() => true),
       markUsed: vi.fn(),
     };
+
+    // Create a map to store cells by position
+    cellMap = new Map();
+    // Helper to create cell objects
+    const createCell = (x: number, y: number, pipe: any = null, blocked: boolean = false) => ({
+      x,
+      y,
+      pipe,
+      blocked,
+    });
+
+    // Initialize grid with cells
+    cellMap.set("0,0", createCell(0, 0, startPipe));
+    cellMap.set("1,0", createCell(1, 0, pipeA));
 
     gridMock = {
       startPipe,
       width: 2,
       height: 1,
-      isValidPosition: vi.fn((x: number, y: number) => x >= 0 && x < 2 && y === 0),
-      getPipeAt: vi.fn((x: number) => (x === 1 ? pipeA : null)),
+      tryGetCell: vi.fn((x: number, y: number) => {
+        if (x < 0 || x >= 2 || y !== 0) return null;
+        return cellMap.get(`${x},${y}`) || null;
+      }),
     };
 
     FlowNetwork["activeStates"] = [];
@@ -50,9 +66,10 @@ describe("FlowNetwork", () => {
   it("should initialize flow with start pipe and delay", () => {
     FlowNetwork.initialize(gridMock, loggerMock, 2);
     const state = FlowNetwork.getActiveState();
-    expect(state.pipe).toBe(startPipe);
-    expect(state.delayRemaining).toBe(2);
-    expect(state.entryDir).toBeNull();
+    expect(state).not.toBeUndefined();
+    expect(state!.pipe).toBe(startPipe);
+    expect(state!.delayRemaining).toBe(2);
+    expect(state!.entryDir).toBeNull();
     expect(loggerMock.info).toHaveBeenCalledWith(
       `Flow initialized at ${startPipe.position} with delay 2s`
     );
@@ -62,8 +79,9 @@ describe("FlowNetwork", () => {
     FlowNetwork.initialize(gridMock, loggerMock, 2);
     FlowNetwork.update(1, 50, gridMock, loggerMock);
     const state = FlowNetwork.getActiveState();
-    expect(state.delayRemaining).toBe(1);
-    expect(state.progress).toBe(0);
+    expect(state).not.toBeUndefined();
+    expect(state!.delayRemaining).toBe(1);
+    expect(state!.progress).toBe(0);
   });
 
   it("should advance flow to next pipe when progress reaches 100", () => {
@@ -72,7 +90,8 @@ describe("FlowNetwork", () => {
     // Start pipe fills fully and advances
     FlowNetwork.update(2, 50, gridMock, loggerMock);
     let state = FlowNetwork.getActiveState();
-    expect(state.pipe).toBe(pipeA);
+    expect(state).not.toBeUndefined();
+    expect(state!.pipe).toBe(pipeA);
     expect(loggerMock.info).toHaveBeenCalledWith(
       `Flow advanced from ${startPipe.position} to ${pipeA.position}`
     );
@@ -87,11 +106,14 @@ describe("FlowNetwork", () => {
   });
 
   it("should ignore invalid next positions", () => {
-    gridMock.getPipeAt = vi.fn(() => null);
+    // Set pipeA cell to have no pipe
+    cellMap.set("1,0", { x: 1, y: 0, pipe: null, blocked: false });
+    
     FlowNetwork.initialize(gridMock, loggerMock, 1);
     FlowNetwork.update(2, 50, gridMock, loggerMock);
     const state = FlowNetwork.getActiveState();
-    expect(state.pipe).toBe(startPipe);
+    expect(state).not.toBeUndefined();
+    expect(state!.pipe).toBe(startPipe);
   });
 
   it("should track visited ports correctly", () => {
@@ -124,19 +146,22 @@ describe("FlowNetwork", () => {
   it("should handle start pipe with no entryDir gracefully", () => {
     FlowNetwork.initialize(gridMock, loggerMock, 0);
     const state = FlowNetwork.getActiveState();
-    expect(state.entryDir).toBeNull();
+    expect(state).not.toBeUndefined();
+    expect(state!.entryDir).toBeNull();
     FlowNetwork.update(1, 50, gridMock, loggerMock); // should not throw
     expect(() => FlowNetwork.update(1, 50, gridMock, loggerMock)).not.toThrow();
   });
 
   it("should stop flow at dead-end pipe", () => {
-    gridMock.getPipeAt = vi.fn((x: number) => (x === 1 ? deadEnd : null));
+    // Update the cell at (1,0) to contain the dead-end pipe
+    cellMap.set("1,0", { x: 1, y: 0, pipe: deadEnd, blocked: false });
 
     FlowNetwork.initialize(gridMock, loggerMock, 0);
     FlowNetwork.update(2, 50, gridMock, loggerMock); // start fills + advances
 
     let state = FlowNetwork.getActiveState();
-    expect(state.pipe).toBe(deadEnd);
+    expect(state).not.toBeUndefined();
+    expect(state!.pipe).toBe(deadEnd);
 
     // Advance enough to fill dead-end (it should stop)
     FlowNetwork.update(3, 50, gridMock, loggerMock);

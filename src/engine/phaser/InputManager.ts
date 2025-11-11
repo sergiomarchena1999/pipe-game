@@ -18,6 +18,16 @@ export class InputManager {
     this.scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handlePointerDown(pointer);
     });
+
+    // Handle mouse movement for cursor
+    this.scene.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      this.handlePointerMove(pointer);
+    });
+
+    // Hide cursor when pointer leaves the game area
+    this.scene.input.on("pointerout", () => {
+      this.renderer.hideGridCursor();
+    });
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
@@ -46,5 +56,14 @@ export class InputManager {
     } catch (err) {
       this.logger.error("Error during grid click", err);
     }
+  }
+
+  private handlePointerMove(pointer: Phaser.Input.Pointer): void {
+    // Get world coordinates (accounting for camera transforms)
+    const worldX = (pointer as any).worldX ?? pointer.x;
+    const worldY = (pointer as any).worldY ?? pointer.y;
+
+    // Update cursor position
+    this.renderer.updateGridCursor(worldX, worldY);
   }
 }

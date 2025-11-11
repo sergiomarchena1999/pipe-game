@@ -28,9 +28,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     this.fillQueue();
   }
 
-  /**
-   * Gets the current contents of the queue (read-only).
-   */
+  /** Gets the current contents of the queue (read-only). */
   get contents(): readonly PipeBase[] {
     return this.queue;
   }
@@ -54,9 +52,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     return next;
   }
 
-  /**
-   * Refills the queue to its maximum size.
-   */
+  /** Refills the queue to its maximum size. */
   private fillQueue(): void {
     while (this.queue.length < this.maxSize) {
       this.enqueueRandomPipe();
@@ -65,9 +61,7 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     this.logger.info(`PipeQueue initialized with ${this.queue.length} items.`);
   }
 
-  /**
-   * Randomly generates a pipe and adds it to the queue.
-   */
+  /** Randomly generates a pipe and adds it to the queue. */
   private enqueueRandomPipe(): void {
     const shape = this.getRandomPipeShape();
     const pipe: PipeBase = {

@@ -24,7 +24,7 @@ export class FlowNetwork {
     this.activeStates = [{
       pipe: startPipe,
       entryDir: null,
-      exitDir: startPipe.getOpenPorts()[0],
+      exitDir: startPipe.openPorts[0],
       progress: 0,
       delayRemaining: startDelaySeconds,
     }];
@@ -79,10 +79,10 @@ export class FlowNetwork {
         y: state.pipe.position.y + state.exitDir.dy,
       };
 
-      if (!grid.isValidPosition(nextPos.x, nextPos.y)) continue;
-      if (grid.isBlocked(nextPos.x, nextPos.y)) continue;
+      const cell = grid.tryGetCell(nextPos.x, nextPos.y);
+      if (!cell || cell.blocked) continue;
 
-      const nextPipe = grid.getPipeAt(nextPos.x, nextPos.y);
+      const nextPipe = cell.pipe;
       if (!nextPipe || !nextPipe.accepts(state.exitDir.opposite)) continue;
 
       // Enqueue next pipe.
@@ -101,7 +101,7 @@ export class FlowNetwork {
   }
 
   private static getNextExit(pipe: Pipe, entryDir: Direction): Direction | null {
-    const openPorts = pipe.getOpenPorts().filter(d => d !== entryDir);
+    const openPorts = pipe.openPorts.filter(d => d !== entryDir);
     if (openPorts.length === 0) return null;
 
     const visited = this.visitedPorts.get(pipe);
@@ -119,7 +119,7 @@ export class FlowNetwork {
     this.visitedPorts.get(pipe)!.add(dir);
   }
 
-  static getActiveState(): ActivePipeState {
+  static getActiveState(): ActivePipeState | undefined {
     return this.activeStates[0];
   }
 

@@ -17,18 +17,18 @@ export class GridCell {
     }
   }
 
-  /** Gets the pipe currently occupying this cell. */
-  get pipe(): Pipe | null {
-    return this._pipe;
-  }
-
   /** Returns true if cell is blocked. */
   get blocked(): boolean {
     return this._blocked;
   }
 
+  /** Gets the pipe currently occupying this cell. */
+  get pipe(): Pipe | null {
+    return this._pipe;
+  }
+
   /** Places a pipe in this cell, replacing any existing pipe. */
-  setPipe(pipe: Pipe): void {
+  set pipe(pipe: Pipe) {
     if (this._blocked) {
       throw new Error(`Cannot place pipe on blocked cell (${this.x}, ${this.y})`);
     }

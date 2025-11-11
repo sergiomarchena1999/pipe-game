@@ -1,9 +1,9 @@
 import { describe, it, beforeEach, expect, vi } from "vitest";
-import { GameState } from "../../src/core/GameState";
+import { ScoreController } from "../../src/core/ScoreController";
 import { FlowNetwork } from "../../src/core/FlowNetwork";
 import { GameConfig } from "../../src/config/GameConfig";
-import { ScoreController } from "../../src/core/ScoreController";
-import { Direction } from "../../src/core/Direction";
+import { GameState } from "../../src/core/GameState";
+
 
 describe("Integration: GameState + Flow + Score", () => {
   let state: GameState;
@@ -17,14 +17,14 @@ describe("Integration: GameState + Flow + Score", () => {
 
   it("should place pipes, advance flow, and update score", () => {
     const grid = state.grid;
-    const score = state.score as ScoreController;
+    const scoreController = state.score as ScoreController;
 
     // Place 2 pipes in a straight line from start
     const start = grid.startPipe!;
     const sx = start.position.x;
     const sy = start.position.y;
 
-    const exitDir = start.getOpenPorts()[0];
+    const exitDir = start.openPorts[0];
     const nextPos1 = { x: sx + exitDir.dx, y: sy + exitDir.dy };
     const nextPos2 = { x: nextPos1.x + exitDir.dx, y: nextPos1.y + exitDir.dy };
 
@@ -46,8 +46,8 @@ describe("Integration: GameState + Flow + Score", () => {
     expect(pipe2!.hasOpenPort(exitDir)).toBe(false);
 
     // Score should reflect all 3 connected pipes
-    score.updateScore();
-    expect(score.getScore()).toBe(3);
+    scoreController.updateScore();
+    expect(scoreController.score).toBe(3);
 
     // Snapshot visited ports should include all pipes
     const snapshot = FlowNetwork.getVisitedPortsSnapshot();

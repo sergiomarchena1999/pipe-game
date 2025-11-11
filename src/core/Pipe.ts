@@ -1,14 +1,12 @@
+import { rotateConnections } from "../utils/rotateConnections";
 import type { PipeShape } from "./constants/PipeShapes";
 import type { GridCell } from "./GridCell";
-import { rotateConnections } from "../utils/rotateConnections";
 import { Direction } from "./Direction";
 import { PipeBase } from "./PipeBase";
 
 
-/**
- * Available pipe piece types, each with distinct connection patterns.
- */
-export class PipePort {
+/** Available pipe piece types, each with distinct connection patterns. */
+class PipePort {
   constructor(
     public readonly direction: Direction,
     public used: boolean = false
@@ -34,7 +32,7 @@ export class Pipe extends PipeBase {
   }
 
   /** Return all directions open for flow */
-  getOpenPorts(): readonly Direction[] {
+  get openPorts(): readonly Direction[] {
     return [...this.ports.values()]
       .filter(p => !p.used)
       .map(p => p.direction);
@@ -56,14 +54,9 @@ export class Pipe extends PipeBase {
     return !!port && !port.used;
   }
 
-  /** Gets the asset key for rendering this pipe type. */
-  get assetKey(): string {
-    return `pipe-${this.shape.id}`;
-  }
-
   /** Returns a string representation for debugging. */
   toString(): string {
-    const portDirs = this.getOpenPorts().map(d => d.toString()).join(",");
+    const portDirs = this.openPorts.map(d => d.toString()).join(",");
     return `${this.assetKey}(${portDirs}) at ${this.position.x},${this.position.y}`;
   }
 }

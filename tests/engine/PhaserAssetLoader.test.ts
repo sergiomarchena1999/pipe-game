@@ -22,8 +22,8 @@ describe("PhaserAssetLoader", () => {
   it("should call load.image for all assets in loadAll", () => {
     loader.loadAll();
 
-    expect(mockScene.textures.exists).toHaveBeenCalledTimes(5);
-    expect(mockScene.load.image).toHaveBeenCalledTimes(5);
+    expect(mockScene.textures.exists).toHaveBeenCalledTimes(10);
+    expect(mockScene.load.image).toHaveBeenCalledTimes(10);
 
     expect(mockScene.load.image).toHaveBeenCalledWith("grid-cell", expect.any(String));
     expect(mockScene.load.image).toHaveBeenCalledWith("pipe-straight", expect.any(String));

@@ -32,7 +32,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
     // Create queue and grid immediately
     this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
-    this._grid = new Grid(this.config, this.logger);
+    this._grid = new Grid(this.config.grid, this.logger);
     this._score = new ScoreController(this.config.grid.width, this.config.grid.height, this._grid, this.logger);
 
     this.logger.debug("GameState constructed — grid and queue created.");
@@ -104,14 +104,14 @@ export class GameState extends EventEmitter<GameStateEvents> {
     }
 
     // Validate placement
-    if (!this._grid.isValidPosition(x, y) || !this._grid.isCellEmpty(x, y)) {
+    const cell = this._grid.tryGetCell(x, y);
+    if (!cell || !this._grid.isCellEmpty(cell)) {
       this.logger.debug(`Cannot place pipe at (${x}, ${y})`);
       return null;
     }
 
     try {
       const queued = this._queue.dequeue();
-      const cell = this._grid.getCell(x, y);
       const pipe = new Pipe(cell, queued.shape, queued.direction);
       this._grid.setPipe(cell, pipe);
 
@@ -125,13 +125,5 @@ export class GameState extends EventEmitter<GameStateEvents> {
       this.logger.error("Failed to place next pipe", err);
       return null;
     }
-  }
-
-  /** Outputs a debug summary of the current game state. */
-  debugSummary(): void {
-    const queueContents = this._queue.contents
-      .map(p => `${p.shape.id}(${p.direction})`)
-      .join(", ");
-    this.logger.debug(`Pipe Queue: [${queueContents}]`);
   }
 }

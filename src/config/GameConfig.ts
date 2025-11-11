@@ -1,18 +1,11 @@
 import { PipeType } from "../core/constants/PipeShapes";
-import { Difficulty } from "../core/Difficulty";
+import { Difficulty, DifficultyConfig } from "./DifficultyConfig";
 
 
-/**
- * Type-safe game configuration interface.
- */
+/** Type-safe game configuration interface. */
 export interface IGameConfig {
-  readonly queueSize: number,
-  readonly grid: {
-    width: number;
-    height: number;
-    cellSize: number;
-    blockedPercentage: number;
-  };
+  readonly queueSize: number;
+  readonly grid: IGridConfig;
   readonly difficulty: Difficulty;
   readonly canvas: {
     readonly width: number;
@@ -24,9 +17,15 @@ export interface IGameConfig {
   readonly pipeFlowSpeed: number;
 }
 
-/**
- * Validates that all weights are positive and sum to > 0.
- */
+export interface IGridConfig {
+  readonly width: number;
+  readonly height: number;
+  readonly cellSize: number;
+  readonly blockedPercentage: number;
+  readonly allowStartPipeOnEdge: boolean;
+}
+
+/** Validates that all weights are positive and sum to > 0. */
 function validatePipeWeights(weights: Record<PipeType, number>): void {
   const entries = Object.entries(weights);
   if (entries.length === 0) {
@@ -36,7 +35,6 @@ function validatePipeWeights(weights: Record<PipeType, number>): void {
   let total = 0;
   for (const [type, weight] of entries) {
     if (type == PipeType.Start) continue;
-
     if (weight <= 0 || !isFinite(weight)) {
       throw new Error(`Invalid weight for ${type}: ${weight}`);
     }
@@ -48,9 +46,7 @@ function validatePipeWeights(weights: Record<PipeType, number>): void {
   }
 }
 
-/**
- * Validates a hex color string.
- */
+/** Validates a hex color string. */
 function isValidHexColor(color: string): boolean {
   return /^#[0-9A-F]{6}$/i.test(color);
 }
@@ -64,6 +60,10 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     throw new Error("Grid dimensions must be positive");
   }
 
+  if (config.grid.allowStartPipeOnEdge && (config.grid.width < 3 || config.grid.height < 3)) {
+    throw new Error("Grid must be at least 3x3 when startPipeOnEdge is enabled");
+  }
+
   if (config.queueSize <= 0) {
     throw new Error("Queue size must be positive");
   }
@@ -72,7 +72,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     throw new Error("Cell size must be positive");
   }
 
-  if (config.pipeFlowSpeed < 0) {
+  if (config.pipeFlowSpeed <= 0) {
     throw new Error("Pipe Flow Speed must be positive");
   }
 
@@ -105,26 +105,14 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
  * Application-wide game configuration.
  * Frozen to prevent accidental modifications.
  */
+const selectedDifficulty = Difficulty.Medium;
+const preset = DifficultyConfig.get(selectedDifficulty);
+
 export const GameConfig: IGameConfig = createGameConfig({
-  queueSize: 5,
-  grid: {
-    width: 8,
-    height: 8,
-    cellSize: 32,
-    blockedPercentage: 10
-  },
-  difficulty: Difficulty.Easy,
+  ...preset,
   canvas: {
     width: 800,
-    height: 600,
+    height: 800,
     backgroundColor: "#00a187",
-  },
-  pipeWeights: {
-    [PipeType.Start]: 0,
-    [PipeType.Straight]: 0.25,
-    [PipeType.Corner]: 0.55,
-    [PipeType.Cross]: 0.20,
-  },
-  flowStartDelaySeconds: 10,
-  pipeFlowSpeed: 20,
+  }
 });

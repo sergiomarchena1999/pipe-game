@@ -21,6 +21,15 @@ export class Direction {
     Direction.Left,
   ];
 
+  /** Returns a Direction instance that matches the given angle (0, 90, 180, 270). */
+  static fromAngle(angle: number): Direction {
+    const normalized = ((angle % 360) + 360) % 360;
+    for (const d of Direction.All) {
+      if (d.angle === normalized) return d;
+    }
+    throw new Error(`No direction with angle ${angle}`);
+  }
+
   /** Returns the opposite direction. */
   get opposite(): Direction {
     switch (this) {
@@ -30,13 +39,6 @@ export class Direction {
       case Direction.Left: return Direction.Right;
       default: throw new Error("Invalid direction");
     }
-  }
-
-  /** Rotates this direction clockwise by a given number of 90° steps. */
-  rotate90(steps: number = 1): Direction {
-    const index = Direction.All.indexOf(this);
-    const newIndex = (index + steps) % Direction.All.length;
-    return Direction.All[newIndex];
   }
 
   /** Converts this direction to a 0–270° angle (Right = 0°, Down = 90°, etc.). */
@@ -50,13 +52,11 @@ export class Direction {
     }
   }
 
-  /** Returns a Direction instance that matches the given angle (0, 90, 180, 270). */
-  static fromAngle(angle: number): Direction {
-    const normalized = ((angle % 360) + 360) % 360;
-    for (const d of Direction.All) {
-      if (d.angle === normalized) return d;
-    }
-    throw new Error(`No direction with angle ${angle}`);
+  /** Rotates this direction clockwise by a given number of 90° steps. */
+  rotate90(steps: number = 1): Direction {
+    const index = Direction.All.indexOf(this);
+    const newIndex = (index + steps) % Direction.All.length;
+    return Direction.All[newIndex];
   }
 
   /** Returns a new coordinate offset from (x, y) in this direction. */
