@@ -20,6 +20,7 @@ export class DifficultyConfig {
           difficulty: Difficulty.Easy,
           queueSize: 5,
           grid: { width: 6, height: 6, cellSize: 64, blockedPercentage: 5, allowStartPipeOnEdge: false },
+          bombConfig: { maxBombs: 3, bombTimerSeconds: 0.5 },
           flowStartDelaySeconds: 12,
           pipeFlowSpeed: 15,
           pipeWeights: {
@@ -36,6 +37,7 @@ export class DifficultyConfig {
           difficulty: Difficulty.Medium,
           queueSize: 5,
           grid: { width: 8, height: 8, cellSize: 64, blockedPercentage: 10, allowStartPipeOnEdge: false },
+          bombConfig: { maxBombs: 2, bombTimerSeconds: 0.8 },
           flowStartDelaySeconds: 10,
           pipeFlowSpeed: 20,
           pipeWeights: {
@@ -51,6 +53,7 @@ export class DifficultyConfig {
           difficulty: Difficulty.Hard,
           queueSize: 6,
           grid: { width: 10, height: 10, cellSize: 64, blockedPercentage: 15, allowStartPipeOnEdge: true },
+          bombConfig: { maxBombs: 1, bombTimerSeconds: 1 },
           flowStartDelaySeconds: 8,
           pipeFlowSpeed: 25,
           pipeWeights: {

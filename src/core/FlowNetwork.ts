@@ -50,15 +50,18 @@ export class FlowNetwork {
       }
 
       if (state.entryDir && !state.exitDir) {
-        state.exitDir = this.getNextExit(state.pipe, state.entryDir, logger, memo);
+        state.pipe.markUsed(state.entryDir);
       }
 
       const prevProgress = state.progress;
+      if (state.entryDir && prevProgress == 0) {
+        state.exitDir = this.getNextExit(state.pipe, state.entryDir, logger, memo);
+      }
+
       state.progress += speed * delta;
 
       if (state.entryDir && prevProgress < 50 && state.progress >= 50) {
         this.addVisited(state.pipe, state.entryDir);
-        state.pipe.markUsed(state.entryDir);
       }
 
       if (state.progress < 100) {

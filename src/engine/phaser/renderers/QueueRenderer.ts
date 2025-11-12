@@ -23,7 +23,11 @@ export class QueueRenderer {
 
     for (let i = 0; i < config.queueSize; i++) {
       const bgY = queuePos.y - totalHeight + (i * cellSize);
-      const sprite = i == config.queueSize - 1 ? "queue-selected" : "queue-tile";
+      const sprite = i == config.queueSize - 1 
+        ? "queue-selected"
+        : i == 0
+          ? "queue-tile-border"
+          : "queue-tile";
       const background = this.scene.add
         .image(queueCenterX, bgY, sprite)
         .setOrigin(0.5, 0)

@@ -3,6 +3,10 @@ import type { IPhaserScene } from "./IPhaserScene";
 
 import tileBackground from "../../assets/tile-background.png";
 
+import bombIdle from "../../assets/bomb/bomb-idle.png";
+import bombExplosion1 from "../../assets/bomb/bomb-explosion-1.png";
+import bombExplosion2 from "../../assets/bomb/bomb-explosion-2.png";
+
 import gridCell from "../../assets/grid/grid-background.png";
 import gridBlock from "../../assets/grid/grid-block.png";
 import gridBorderSide from "../../assets/grid/grid-border-side.png";
@@ -12,6 +16,7 @@ import gridCursor from "../../assets/grid/grid-cursor.png";
 import gridCursorAlt from "../../assets/grid/grid-cursor-alt.png";
 
 import queueTile from "../../assets/queue/queue-tile.png";
+import queueTileBorder from "../../assets/queue/queue-tile-border.png";
 import queueSelected from "../../assets/queue/queue-selected.png";
 
 import pipeStraight from "../../assets/pipes/pipe-straight.png";
@@ -32,6 +37,9 @@ export class PhaserAssetLoader {
    */
   private static readonly ASSETS = {
     "tile-background": tileBackground,
+    "bomb-idle": bombIdle,
+    "bomb-explosion-1": bombExplosion1,
+    "bomb-explosion-2": bombExplosion2,
     "grid-cell": gridCell,
     "grid-block": gridBlock,
     "grid-border-side": gridBorderSide,
@@ -39,6 +47,7 @@ export class PhaserAssetLoader {
     "grid-cursor": gridCursor,
     "grid-cursor-alt": gridCursorAlt,
     "queue-tile": queueTile,
+    "queue-tile-border": queueTileBorder,
     "queue-selected": queueSelected,
     "pipe-straight": pipeStraight,
     "pipe-corner": pipeCorner,

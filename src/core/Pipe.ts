@@ -13,12 +13,11 @@ class PipePort {
   ) {}
 }
 
-/**
- * Represents a single pipe piece on the grid.
- * Immutable after construction to prevent invalid states.
- */
+/** Represents a single pipe piece on the grid. */
 export class Pipe extends PipeBase {
   readonly ports: Map<Direction, PipePort>;
+  private _isBeingBombed: boolean = false;
+  private _bombStartTime: number = 0;
 
   constructor(
     public readonly position: GridCell,
@@ -36,6 +35,27 @@ export class Pipe extends PipeBase {
     return [...this.ports.values()]
       .filter(p => !p.used)
       .map(p => p.direction);
+  }
+
+  /** Returns a boolean indicating if the pipe has any port being used */
+  get blocked() : boolean {
+    return [...this.ports.values()].filter(p => p.used).length > 0 || this._isBeingBombed;
+  }
+
+  startBombAnimation(currentTime: number): void {
+    this._isBeingBombed = true;
+    this._bombStartTime = currentTime;
+  }
+
+  getBombProgress(currentTime: number, duration: number): number {
+    if (!this._isBeingBombed) return 0;
+    const elapsed = currentTime - this._bombStartTime;
+    return Math.min(elapsed / duration, 1);
+  }
+
+  resetBombState(): void {
+    this._isBeingBombed = false;
+    this._bombStartTime = 0;
   }
 
   /** Marks a port as used */

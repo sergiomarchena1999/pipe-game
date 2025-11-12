@@ -61,13 +61,27 @@ export class MainScene extends Phaser.Scene implements IPhaserScene {
   update(_time: number, delta: number): void {
     const deltaTime = delta / 1000;
     this.state.update(deltaTime);
-    this.assetRenderer.renderFlowPreview();
+    this.assetRenderer.renderWaterFlow();
   }
 
   private subscribeToGameEvents(): void {
     this.state.once("initialized", (grid) => {
       const startPipe = grid.startPipe;
-      this.assetRenderer.renderPipe(startPipe);
+      this.assetRenderer.addPipe(startPipe);
+    });
+
+    // Handle bomb animations
+    this.state.on("bombStarted", (cell, durationMs) => {
+      this.assetRenderer.startBombAnimation(cell, durationMs, () => {
+        // Animation completed on renderer side
+        this.logger.debug(`Bomb animation completed at ${cell}`);
+      });
+    });
+
+    this.state.on("bombCompleted", (newPipe) => {
+      // Remove the pipe sprite after bomb completes
+      this.assetRenderer.removePipe(newPipe.position);
+      this.assetRenderer.addPipe(newPipe);
     });
   }
 

@@ -8,8 +8,14 @@ export interface IGameConfig {
   readonly grid: IGridConfig;
   readonly difficulty: Difficulty;
   readonly pipeWeights: Record<PipeType, number>;
+  readonly bombConfig: IBombConfig;
   readonly flowStartDelaySeconds: number;
   readonly pipeFlowSpeed: number;
+}
+
+export interface IBombConfig {
+  readonly bombTimerSeconds: number;
+  readonly maxBombs: number;
 }
 
 export interface IGridConfig {
@@ -54,20 +60,28 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     throw new Error("Grid must be at least 3x3 when startPipeOnEdge is enabled");
   }
 
-  if (config.queueSize <= 0) {
-    throw new Error("Queue size must be positive");
+  if (config.queueSize < 0) {
+    throw new Error("Queue size must be greater than 0");
   }
 
   if (config.grid.cellSize <= 0) {
     throw new Error("Cell size must be positive");
   }
 
-  if (config.pipeFlowSpeed <= 0) {
-    throw new Error("Pipe Flow Speed must be positive");
+  if (config.bombConfig.bombTimerSeconds < 0) {
+    throw new Error("Bomb timer must be greater than 0");
+  }
+
+  if (config.bombConfig.maxBombs <= 0) {
+    throw new Error("Maximum bombs must be positive");
+  }
+
+  if (config.pipeFlowSpeed < 0) {
+    throw new Error("Pipe Flow Speed must be greater than 0");
   }
 
   if (config.flowStartDelaySeconds < 0) {
-    throw new Error("Pipe Flow Start Delay must be positive");
+    throw new Error("Pipe Flow Start Delay must be greater than 0");
   }
 
   validatePipeWeights(config.pipeWeights);
@@ -77,6 +91,7 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
     grid: Object.freeze({ ...config.grid }),
     difficulty: config.difficulty,
     pipeWeights: Object.freeze({ ...config.pipeWeights }),
+    bombConfig: config.bombConfig,
     flowStartDelaySeconds: config.flowStartDelaySeconds,
     pipeFlowSpeed: config.pipeFlowSpeed
   });

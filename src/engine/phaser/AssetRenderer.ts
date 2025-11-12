@@ -2,8 +2,9 @@ import type { WorldContainer } from "./WorldContainer";
 import type { IGameConfig } from "../../config/GameConfig";
 import type { ILogger } from "../../core/logging/ILogger";
 import type { PipeQueue } from "../../core/PipeQueue";
-import type { Pipe } from "../../core/Pipe";
+import type { GridCell } from "../../core/GridCell";
 import type { Grid } from "../../core/Grid";
+import type { Pipe } from "../../core/Pipe";
 
 import { CursorRenderer } from "./renderers/CursorRenderer";
 import { QueueRenderer } from "./renderers/QueueRenderer";
@@ -42,15 +43,21 @@ export class AssetRenderer {
     this.gridRenderer.renderBackground(grid);
   }
 
-  renderPipe(pipe: Pipe): void {
+  /** Adds a pipe sprite to the grid. */
+  addPipe(pipe: Pipe): void {
     this.pipeRenderer.render(pipe);
+  }
+
+  /** Removes a pipe sprite from the grid. */
+  removePipe(cell: GridCell): void {
+    this.pipeRenderer.remove(cell);
   }
 
   renderQueue(queue: PipeQueue): void {
     this.queueRenderer.render(queue);
   }
 
-  renderFlowPreview(): void {
+  renderWaterFlow(): void {
     this.flowRenderer.renderPreview();
   }
 
@@ -60,6 +67,11 @@ export class AssetRenderer {
 
   hideGridCursor(): void {
     this.cursorRenderer.hide();
+  }
+
+  /** Starts a bomb animation at the specified grid cell. */
+  startBombAnimation(cell: GridCell, durationMs: number, onComplete?: () => void): void {
+    this.pipeRenderer.startBombAnimation(cell, durationMs, onComplete);
   }
 
   worldToGrid(worldX: number, worldY: number): { x: number; y: number } | null {

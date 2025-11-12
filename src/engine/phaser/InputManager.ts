@@ -51,8 +51,8 @@ export class InputManager {
         return;
       }
 
-      this.renderer.renderPipe(placed);
-      this.renderer.renderFlowPreview();
+      this.renderer.addPipe(placed);
+      this.renderer.renderWaterFlow();
     } catch (err) {
       this.logger.error("Error during grid click", err);
     }

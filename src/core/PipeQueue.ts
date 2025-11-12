@@ -52,6 +52,18 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     return next;
   }
 
+  /**
+   * Returns the next pipe in the queue without removing it.
+   * @returns The next PipeBase, or null if the queue is empty.
+   */
+  peek(): PipeBase | null {
+    if (this.queue.length === 0) {
+      this.logger.warn("PipeQueue is empty — cannot peek.");
+      return null;
+    }
+    return this.queue[0];
+  }
+
   /** Refills the queue to its maximum size. */
   private fillQueue(): void {
     while (this.queue.length < this.maxSize) {

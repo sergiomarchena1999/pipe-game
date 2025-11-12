@@ -1,17 +1,20 @@
 import { EventEmitter } from "eventemitter3";
 import type { IGameConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
+import type { GridCell } from "./GridCell";
 
 import { ScoreController } from "./ScoreController";
+import { BombController } from "./BombController";
 import { FlowNetwork } from "./FlowNetwork";
 import { PipeQueue } from "./PipeQueue";
 import { Pipe } from "./Pipe";
 import { Grid } from "./Grid";
 
-
 interface GameStateEvents {
   initialized: (grid: Grid) => void;
   stopped: () => void;
+  bombStarted: (cell: GridCell, durationMs: number) => void;
+  bombCompleted: (newPipe: Pipe) => void;
 }
 
 /**
@@ -22,7 +25,9 @@ export class GameState extends EventEmitter<GameStateEvents> {
   private readonly _grid: Grid;
   private readonly _queue: PipeQueue;
   private readonly _score: ScoreController;
+  private readonly _bombController: BombController;
   private isInitialized = false;
+  private currentTime: number = 0;
 
   constructor(
     private readonly config: IGameConfig,
@@ -33,7 +38,24 @@ export class GameState extends EventEmitter<GameStateEvents> {
     // Create queue and grid immediately
     this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
     this._grid = new Grid(this.config.grid, this.logger);
-    this._score = new ScoreController(this.config.grid.width, this.config.grid.height, this._grid, this.logger);
+    this._score = new ScoreController(
+      this.config.grid.width, 
+      this.config.grid.height, 
+      this._grid, 
+      this.logger
+    );
+    
+    // Create bomb controller with event callbacks
+    this._bombController = new BombController(
+      this._grid,
+      this._queue,
+      this.logger,
+      this.config.bombConfig,
+      {
+        onBombStarted: (cell, durationMs) => this.emit("bombStarted", cell, durationMs),
+        onBombCompleted: (newPipe) => this.emit("bombCompleted", newPipe)
+      }
+    );
 
     this.logger.debug("GameState constructed — grid and queue created.");
   }
@@ -47,10 +69,15 @@ export class GameState extends EventEmitter<GameStateEvents> {
   get queue(): PipeQueue {
     return this._queue;
   }
-  
+
   /** Gets the score controller. */
-  get score(): ScoreController {
+  get scoreController(): ScoreController {
     return this._score;
+  }
+
+  /** Gets the bomb controller. */
+  get bombController(): BombController {
+    return this._bombController;
   }
 
   /**
@@ -78,6 +105,8 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
   /** Updates the game state (called every frame). */
   update(deltaTime: number): void {
+    this.currentTime += deltaTime;
+    this._bombController.update(this.currentTime);
     FlowNetwork.update(deltaTime, this.config.pipeFlowSpeed, this._grid, this.logger);
   }
 
@@ -88,6 +117,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
       return;
     }
 
+    this._bombController.cancelAll();
     this.emit("stopped");
     this.isInitialized = false;
     this.logger.info("GameState stopped");
@@ -95,7 +125,8 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
   /**
    * Places the next queued pipe at the given grid coordinates.
-   * Returns the created Pipe, or null if placement was invalid.
+   * If a pipe exists, starts a bomb animation instead.
+   * Returns the created Pipe, or null if placement was invalid or bomb was started.
    */
   placeNextPipe(x: number, y: number): Pipe | null {
     if (!this.isInitialized) {
@@ -105,17 +136,25 @@ export class GameState extends EventEmitter<GameStateEvents> {
 
     // Validate placement
     const cell = this._grid.tryGetCell(x, y);
-    if (!cell || !this._grid.isCellEmpty(cell)) {
+    if (!cell || cell.blocked) {
       this.logger.debug(`Cannot place pipe at (${x}, ${y})`);
       return null;
     }
 
+    // If cell has a pipe, start bomb animation
+    const existingPipe = cell.pipe;
+    if (existingPipe) {
+      this._bombController.startBomb(existingPipe, this.currentTime);
+      return null; // Return null whether bomb started or not
+    }
+
+    // Place new pipe
     try {
       const queued = this._queue.dequeue();
       const pipe = new Pipe(cell, queued.shape, queued.direction);
       this._grid.setPipe(cell, pipe);
 
-      this.logger.info(`Placed pipe ${queued.shape.id} at (${x}, ${y}) dir=${queued.direction}`);
+      this.logger.info(`Placed pipe ${queued.shape.id} at ${cell} dir=${queued.direction}`);
       if (this._grid.isConnectedToNetwork(pipe)) {
         this._score.updateScore();
       }
