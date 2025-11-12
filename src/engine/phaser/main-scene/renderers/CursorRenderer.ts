@@ -1,5 +1,5 @@
-import type { WorldContainer } from "../WorldContainer";
-import type { ILogger } from "../../../core/logging/ILogger";
+import type { WorldContainer } from "../../WorldContainer";
+import type { ILogger } from "../../../../core/logging/ILogger";
 
 
 /** Handles the animated grid cursor */

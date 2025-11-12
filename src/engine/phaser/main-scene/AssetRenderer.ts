@@ -1,10 +1,10 @@
-import type { WorldContainer } from "./WorldContainer";
-import type { IGameConfig } from "../../config/GameConfig";
-import type { ILogger } from "../../core/logging/ILogger";
-import type { PipeQueue } from "../../core/PipeQueue";
-import type { GridCell } from "../../core/GridCell";
-import type { Grid } from "../../core/Grid";
-import type { Pipe } from "../../core/Pipe";
+import type { WorldContainer } from "../WorldContainer";
+import type { IGameConfig } from "../../../config/GameConfig";
+import type { ILogger } from "../../../core/logging/ILogger";
+import type { PipeQueue } from "../../../core/PipeQueue";
+import type { GridCell } from "../../../core/GridCell";
+import type { Grid } from "../../../core/Grid";
+import type { Pipe } from "../../../core/Pipe";
 
 import { CursorRenderer } from "./renderers/CursorRenderer";
 import { QueueRenderer } from "./renderers/QueueRenderer";

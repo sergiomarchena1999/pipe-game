@@ -11,7 +11,6 @@ export enum Difficulty {
 export class DifficultyConfig {
   /**
    * Returns a preset game configuration for a given difficulty.
-   * You can override or merge this with a base config if needed.
    */
   static get(difficulty: Difficulty): Readonly<IGameConfig> {
     switch (difficulty) {
@@ -31,7 +30,6 @@ export class DifficultyConfig {
           },
         });
 
-      default:
       case Difficulty.Medium:
         return Object.freeze({
           difficulty: Difficulty.Medium,
@@ -63,6 +61,9 @@ export class DifficultyConfig {
             [PipeType.Cross]: 0.25,
           },
         });
+
+      default:
+        return this.get(Difficulty.Medium);
     }
   }
 }

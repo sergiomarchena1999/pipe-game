@@ -1,7 +1,7 @@
-import type { WorldContainer } from "../WorldContainer";
-import type { IGameConfig } from "../../../config/GameConfig";
-import type { PipeQueue } from "../../../core/PipeQueue";
-import type { ILogger } from "../../../core/logging/ILogger";
+import type { WorldContainer } from "../../WorldContainer";
+import type { IGameConfig } from "../../../../config/GameConfig";
+import type { PipeQueue } from "../../../../core/PipeQueue";
+import type { ILogger } from "../../../../core/logging/ILogger";
 
 
 /** Handles rendering the pipe queue with sprite pooling for performance */

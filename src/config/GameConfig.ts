@@ -1,5 +1,5 @@
 import { PipeType } from "../core/constants/PipeShapes";
-import { Difficulty, DifficultyConfig } from "./DifficultyConfig";
+import type { Difficulty } from "./DifficultyConfig";
 
 
 /** Type-safe game configuration interface. */
@@ -26,32 +26,11 @@ export interface IGridConfig {
   readonly allowStartPipeOnEdge: boolean;
 }
 
-/** Validates that all weights are positive and sum to > 0. */
-function validatePipeWeights(weights: Record<PipeType, number>): void {
-  const entries = Object.entries(weights);
-  if (entries.length === 0) {
-    throw new Error("Pipe weights must not be empty");
-  }
-
-  let total = 0;
-  for (const [type, weight] of entries) {
-    if (type == PipeType.Start) continue;
-    if (weight <= 0 || !isFinite(weight)) {
-      throw new Error(`Invalid weight for ${type}: ${weight}`);
-    }
-    total += weight;
-  }
-
-  if (total <= 0) {
-    throw new Error("Total pipe weight must be greater than zero");
-  }
-}
-
 /**
- * Creates and validates game configuration.
+ * Validates game configuration.
  * @throws {Error} if configuration is invalid
  */
-function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
+export function validateGameConfig(config: IGameConfig): void {
   if (config.grid.width <= 0 || config.grid.height <= 0) {
     throw new Error("Grid dimensions must be positive");
   }
@@ -85,23 +64,25 @@ function createGameConfig(config: IGameConfig): Readonly<IGameConfig> {
   }
 
   validatePipeWeights(config.pipeWeights);
-
-  return Object.freeze({
-    queueSize: config.queueSize,
-    grid: Object.freeze({ ...config.grid }),
-    difficulty: config.difficulty,
-    pipeWeights: Object.freeze({ ...config.pipeWeights }),
-    bombConfig: config.bombConfig,
-    flowStartDelaySeconds: config.flowStartDelaySeconds,
-    pipeFlowSpeed: config.pipeFlowSpeed
-  });
 }
 
-/**
- * Application-wide game configuration.
- * Frozen to prevent accidental modifications.
- */
-const selectedDifficulty = Difficulty.Medium;
-const preset = DifficultyConfig.get(selectedDifficulty);
+/** Validates that all weights are positive and sum to > 0. */
+function validatePipeWeights(weights: Record<PipeType, number>): void {
+  const entries = Object.entries(weights);
+  if (entries.length === 0) {
+    throw new Error("Pipe weights must not be empty");
+  }
 
-export const GameConfig: IGameConfig = createGameConfig(preset);
+  let total = 0;
+  for (const [type, weight] of entries) {
+    if (type === PipeType.Start) continue;
+    if (weight <= 0 || !isFinite(weight)) {
+      throw new Error(`Invalid weight for ${type}: ${weight}`);
+    }
+    total += weight;
+  }
+
+  if (total <= 0) {
+    throw new Error("Total pipe weight must be greater than zero");
+  }
+}

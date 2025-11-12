@@ -1,7 +1,7 @@
-import type { WorldContainer } from "../WorldContainer";
-import type { IGameConfig } from "../../../config/GameConfig";
-import type { ILogger } from "../../../core/logging/ILogger";
-import type { Grid } from "../../../core/Grid";
+import type { WorldContainer } from "../../WorldContainer";
+import type { IGameConfig } from "../../../../config/GameConfig";
+import type { ILogger } from "../../../../core/logging/ILogger";
+import type { Grid } from "../../../../core/Grid";
 
 /** Handles rendering of the grid background and border */
 export class GridRenderer {

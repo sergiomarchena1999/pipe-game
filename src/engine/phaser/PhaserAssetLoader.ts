@@ -3,6 +3,9 @@ import type { IPhaserScene } from "./IPhaserScene";
 
 import tileBackground from "../../assets/tile-background.png";
 
+import titlePipe from "../../assets/menu/title-pipe.png";
+import titleMania from "../../assets/menu/title-mania.png";
+
 import bombIdle from "../../assets/bomb/bomb-idle.png";
 import bombExplosion1 from "../../assets/bomb/bomb-explosion-1.png";
 import bombExplosion2 from "../../assets/bomb/bomb-explosion-2.png";
@@ -37,6 +40,8 @@ export class PhaserAssetLoader {
    */
   private static readonly ASSETS = {
     "tile-background": tileBackground,
+    "title-pipe": titlePipe,
+    "title-mania": titleMania,
     "bomb-idle": bombIdle,
     "bomb-explosion-1": bombExplosion1,
     "bomb-explosion-2": bombExplosion2,

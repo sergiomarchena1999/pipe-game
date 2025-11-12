@@ -1,5 +1,5 @@
-import type { GameState } from "../../core/GameState";
-import type { ILogger } from "../../core/logging/ILogger";
+import type { GameState } from "../../../core/GameState";
+import type { ILogger } from "../../../core/logging/ILogger";
 import { AssetRenderer } from "./AssetRenderer";
 
 /**

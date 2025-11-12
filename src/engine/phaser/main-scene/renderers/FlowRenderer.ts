@@ -1,6 +1,6 @@
-import type { WorldContainer } from "../WorldContainer";
-import type { IGameConfig } from "../../../config/GameConfig";
-import { FlowNetwork } from "../../../core/FlowNetwork";
+import type { WorldContainer } from "../../WorldContainer";
+import type { IGameConfig } from "../../../../config/GameConfig";
+import { FlowNetwork } from "../../../../core/FlowNetwork";
 
 
 /** Handles rendering of flow animations and preview */
