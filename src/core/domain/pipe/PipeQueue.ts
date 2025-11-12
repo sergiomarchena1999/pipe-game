@@ -8,8 +8,8 @@ import type { PipeBase } from "./PipeBase";
 
 /** Events emitted by the PipeQueue. */
 interface PipeQueueEvents {
-  updated: [readonly PipeBase[]];
-  dequeued: [PipeBase];
+  onUpdated: [readonly PipeBase[]];
+  onDequeued: [PipeBase];
 }
 
 /**
@@ -28,6 +28,10 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     this.fillQueue();
   }
 
+  // ============================================================================
+  // Public API
+  // ============================================================================
+
   /** Gets the current contents of the queue (read-only). */
   get contents(): readonly PipeBase[] {
     return this.queue;
@@ -45,8 +49,8 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
 
     const next = this.queue.shift()!;
     this.enqueueRandomPipe();
-    this.emit("dequeued", next);
-    this.emit("updated", this.queue);
+    this.emit("onDequeued", next);
+    this.emit("onUpdated", this.queue);
     this.logger.debug(`Dequeued pipe: ${next}`);
 
     return next;
@@ -64,12 +68,23 @@ export class PipeQueue extends EventEmitter<PipeQueueEvents> {
     return this.queue[0];
   }
 
+  /** Clears the queue and refills it with new random pipes. */
+  reset(): void {
+    this.queue.length = 0;
+    this.fillQueue();
+    this.logger.info("PipeQueue reset");
+  }
+
+  // ============================================================================
+  // Private Implementation
+  // ============================================================================
+
   /** Refills the queue to its maximum size. */
   private fillQueue(): void {
     while (this.queue.length < this.maxSize) {
       this.enqueueRandomPipe();
     }
-    this.emit("updated", this.queue);
+    this.emit("onUpdated", this.queue);
     this.logger.info(`PipeQueue initialized with ${this.queue.length} items.`);
   }
 

@@ -65,7 +65,7 @@ export class GridRenderer {
         const cell = grid.getCell(pos);
         const local = this.world.gridToLocalCorner(pos);
 
-        const assetKey = cell.blocked ? "grid-block" : "grid-cell";
+        const assetKey = cell.isBlocked ? "grid-block" : "grid-cell";
         const sprite = this.scene.add
           .image(local.x, local.y, assetKey)
           .setOrigin(0)

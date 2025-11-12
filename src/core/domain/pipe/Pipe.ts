@@ -40,7 +40,7 @@ export class Pipe extends PipeBase {
   }
 
   /** Returns a boolean indicating if the pipe has any port being used */
-  get blocked() : boolean {
+  get isBlocked() : boolean {
     return [...this.ports.values()].filter(p => p.used).length > 0 || this._isBeingBombed;
   }
 
@@ -66,7 +66,7 @@ export class Pipe extends PipeBase {
   }
 
   /** Marks a port as used */
-  markUsed(dir: Direction): void {
+  markPortUsed(dir: Direction): void {
     this.ports.get(dir)!.used = true;
   }
 
