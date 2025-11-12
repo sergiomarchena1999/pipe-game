@@ -19,7 +19,7 @@ interface GameStateEvents {
   onInitialized: (grid: Grid) => void;
   onStopped: () => void;
   onBombStarted: (pos: GridPosition, durationMs: number) => void;
-  bombCompleted: (newPipe: Pipe) => void;
+  onBombCompleted: (newPipe: Pipe) => void;
 }
 
 /**
@@ -42,7 +42,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
     super();
 
     // Create queue and grid immediately
-    this._queue = new PipeQueue(this.logger, this.config.pipeWeights, this.config.queueSize);
+    this._queue = new PipeQueue(this.logger, this.config.queue);
     this._grid = new Grid(this.config.grid, this.logger);
     this._flowNetwork = new FlowNetwork(this._grid, logger);
     this._score = new ScoreController(
@@ -60,7 +60,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
       this.config.bombConfig,
       {
         onBombStarted: (pos, durationMs) => this.emit("onBombStarted", pos, durationMs),
-        onBombCompleted: (newPipe) => this.emit("bombCompleted", newPipe)
+        onBombCompleted: (newPipe) => this.emit("onBombCompleted", newPipe)
       }
     );
 

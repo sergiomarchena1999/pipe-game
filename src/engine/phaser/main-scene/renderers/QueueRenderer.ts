@@ -19,11 +19,11 @@ export class QueueRenderer {
     const queuePos = this.world.getQueuePosition();
     const queueCenterX = queuePos.x;
     const cellSize = config.grid.cellSize;
-    const totalHeight = config.queueSize * cellSize - cellSize;
+    const totalHeight = config.queue.maxSize * cellSize - cellSize;
 
-    for (let i = 0; i < config.queueSize; i++) {
+    for (let i = 0; i < config.queue.maxSize; i++) {
       const bgY = queuePos.y - totalHeight + (i * cellSize);
-      const sprite = i == config.queueSize - 1 
+      const sprite = i == config.queue.maxSize - 1 
         ? "queue-selected"
         : i == 0
           ? "queue-tile-border"

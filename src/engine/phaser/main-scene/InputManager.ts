@@ -42,13 +42,14 @@ export class InputManager {
         return;
       }
 
-      const placed = this.state.placeNextPipe(gridPos);
-      if (!placed) {
-        this.logger.debug(`Placement rejected at ${gridPos}`);
+      const result = this.state.placeNextPipe(gridPos);
+      if (!result.success) {
+        this.logger.debug(`Failed to place pipe at ${gridPos}: ${result.error}`);
         return;
       }
 
-      this.renderer.addPipe(placed);
+      const pipe = result.value;
+      this.renderer.addPipe(pipe);
       this.renderer.renderWaterFlow();
     } catch (err) {
       this.logger.error("Error during grid click", err);

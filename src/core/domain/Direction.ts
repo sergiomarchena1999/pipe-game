@@ -1,18 +1,22 @@
+
+type DirectionName = "up" | "right" | "down" | "left";
+
 /**
  * Represents a cardinal direction on the grid.
- * Provides helpers for rotation, offsets, and comparisons.
+ * Immutable value object with helper methods for rotation and navigation.
  */
 export class Direction {
   private constructor(
-    public readonly name: string,
+    public readonly name: DirectionName,
     public readonly dx: number,
-    public readonly dy: number
+    public readonly dy: number,
+    public readonly angle: number
   ) {}
 
-  static readonly Up = new Direction("up", 0, -1);
-  static readonly Right = new Direction("right", 1, 0);
-  static readonly Down = new Direction("down", 0, 1);
-  static readonly Left = new Direction("left", -1, 0);
+  static readonly Up = new Direction("up", 0, -1, 270);
+  static readonly Right = new Direction("right", 1, 0, 0);
+  static readonly Down = new Direction("down", 0, 1, 90);
+  static readonly Left = new Direction("left", -1, 0, 180);
 
   static readonly All: readonly Direction[] = [
     Direction.Up,
@@ -21,49 +25,66 @@ export class Direction {
     Direction.Left,
   ];
 
-  /** Returns a Direction instance that matches the given angle (0, 90, 180, 270). */
+  private static readonly byAngle = new Map<number, Direction>([
+    [0, Direction.Right],
+    [90, Direction.Down],
+    [180, Direction.Left],
+    [270, Direction.Up],
+  ]);
+
+  private static readonly opposites = new Map<Direction, Direction>([
+    [Direction.Up, Direction.Down],
+    [Direction.Right, Direction.Left],
+    [Direction.Down, Direction.Up],
+    [Direction.Left, Direction.Right],
+  ]);
+
+  /**
+   * Returns a Direction instance for the given angle (0, 90, 180, 270).
+   * @throws {Error} if angle is not a valid cardinal direction
+   */
   static fromAngle(angle: number): Direction {
     const normalized = ((angle % 360) + 360) % 360;
-    for (const d of Direction.All) {
-      if (d.angle === normalized) return d;
+    const direction = Direction.byAngle.get(normalized);
+    
+    if (!direction) {
+      throw new Error(`Invalid angle ${angle}. Must be 0, 90, 180, or 270 degrees.`);
     }
-    throw new Error(`No direction with angle ${angle}`);
+    
+    return direction;
+  }
+
+  /**
+   * Safely attempts to create a Direction from an angle.
+   * Returns null if the angle is invalid.
+   */
+  static tryFromAngle(angle: number): Direction | null {
+    const normalized = ((angle % 360) + 360) % 360;
+    return Direction.byAngle.get(normalized) ?? null;
   }
 
   /** Returns the opposite direction. */
   get opposite(): Direction {
-    switch (this) {
-      case Direction.Up: return Direction.Down;
-      case Direction.Right: return Direction.Left;
-      case Direction.Down: return Direction.Up;
-      case Direction.Left: return Direction.Right;
-      default: throw new Error("Invalid direction");
-    }
+    return Direction.opposites.get(this)!;
   }
 
-  /** Converts this direction to a 0–270° angle (Right = 0°, Down = 90°, etc.). */
-  get angle(): number {
-    switch (this) {
-      case Direction.Right: return 0;
-      case Direction.Down: return 90;
-      case Direction.Left: return 180;
-      case Direction.Up: return 270;
-      default: return 0;
-    }
-  }
-
-  /** Rotates this direction clockwise by a given number of 90° steps. */
+  /**
+   * Rotates this direction clockwise by the specified number of 90° steps.
+   * @param steps Number of 90° rotations (can be negative for counter-clockwise)
+   */
   rotate90(steps: number = 1): Direction {
     const index = Direction.All.indexOf(this);
-    const newIndex = (index + steps) % Direction.All.length;
+    const normalizedSteps = ((steps % 4) + 4) % 4;
+    const newIndex = (index + normalizedSteps) % Direction.All.length;
     return Direction.All[newIndex];
   }
 
-  /** Returns a new coordinate offset from (x, y) in this direction. */
-  offset(x: number, y: number): { x: number; y: number } {
+  /** Returns new coordinates offset from the given position in this direction. */
+  offset(x: number, y: number): { readonly x: number; readonly y: number } {
     return { x: x + this.dx, y: y + this.dy };
   }
 
+  /** Returns a string representation for debugging. */
   toString(): string {
     return this.name;
   }

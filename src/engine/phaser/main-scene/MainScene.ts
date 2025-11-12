@@ -66,7 +66,7 @@ export class MainScene extends Phaser.Scene {
     this.assetRenderer.renderGridBackground(this.state.grid);
     
     const queue = this.state.queue;
-    queue.on("updated", () => this.assetRenderer.renderQueue(queue));
+    queue.on("onUpdated", () => this.assetRenderer.renderQueue(queue));
     this.assetRenderer.renderQueue(queue);
 
     this.inputManager = new InputManager(
@@ -87,18 +87,18 @@ export class MainScene extends Phaser.Scene {
   }
 
   private subscribeToGameEvents(): void {
-    this.state.once("initialized", (grid) => {
+    this.state.once("onInitialized", (grid) => {
       const startPipe = grid.startPipe;
       this.assetRenderer.addPipe(startPipe);
     });
 
-    this.state.on("bombStarted", (pos, durationMs) => {
+    this.state.on("onBombStarted", (pos, durationMs) => {
       this.assetRenderer.startBombAnimation(pos, durationMs, () => {
         this.logger.debug(`Bomb animation completed at ${pos}`);
       });
     });
 
-    this.state.on("bombCompleted", (newPipe) => {
+    this.state.on("onBombCompleted", (newPipe) => {
       this.assetRenderer.removePipe(newPipe.position);
       this.assetRenderer.addPipe(newPipe);
     });

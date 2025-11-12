@@ -6,7 +6,7 @@ import { Direction } from "../Direction";
  * Base class for any pipe piece (either in queue or placed on grid).
  * Holds the shape and orientation (rotation).
  */
-export abstract class PipeBase {
+export class PipeBase {
   constructor(
     public readonly shape: PipeShape,
     public readonly direction: Direction
