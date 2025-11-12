@@ -220,7 +220,6 @@ export class GameState extends EventEmitter<GameStateEvents> {
     if (cell.hasPipe) {
       const existingPipe = cell.pipe!;
       const bombResult = this._bombController.startBomb(existingPipe, this._currentTime);
-
       if (bombResult.success) {
         return R.fail('bomb_started');
       } else {

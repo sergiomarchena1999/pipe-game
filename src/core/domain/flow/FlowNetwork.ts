@@ -13,6 +13,15 @@ interface ActivePipeState {
   delayRemaining: number; // seconds
 }
 
+/** Cache key for path calculation memoization. */
+type PathCacheKey = string;
+
+/** Cached path calculation result. */
+interface PathResult {
+  readonly direction: Direction | null;
+  readonly length: number;
+}
+
 /**
  * Central flow network that simulates water flowing through pipes.
  * Handles path-finding, progress tracking, and port usage marking.
@@ -20,6 +29,7 @@ interface ActivePipeState {
 export class FlowNetwork {
   private activeStates: ActivePipeState[] = [];
   private visitedPorts = new Map<Pipe, Set<Direction>>();
+  private pathCache = new Map<PathCacheKey, PathResult>();
 
   constructor(
     private readonly grid: Grid,
@@ -37,6 +47,7 @@ export class FlowNetwork {
       this.logger.warn("Cannot initialize flow: no start pipe");
       return;
     }
+
     // Start flow from first open port
     const firstPort = startPipe.openPorts[0];
     if (!firstPort) {
@@ -53,6 +64,7 @@ export class FlowNetwork {
     }];
 
     this.visitedPorts.clear();
+    this.pathCache.clear();
     this.logger.info(`Flow initialized at ${startPipe.position} with delay ${startDelaySeconds}s`);
   }
 
@@ -63,10 +75,6 @@ export class FlowNetwork {
    */
   update(delta: number, speed: number) {
     const newStates: ActivePipeState[] = [];
-
-    // Shared memo for all active states during this update
-    const memo = new Map<string, { direction: Direction | null; length: number }>();
-
     for (const state of this.activeStates) {
       // Handle initial delay
       if (state.delayRemaining > 0) {
@@ -83,7 +91,7 @@ export class FlowNetwork {
       // Determine exit direction when flow enters pipe
       const prevProgress = state.progress;
       if (state.entryDir && prevProgress == 0) {
-        state.exitDir = this.getNextExit(state.pipe, state.entryDir, memo);
+        state.exitDir = this.selectExitDirection(state.pipe, state.entryDir);
       }
 
       // Advance progress
@@ -165,22 +173,28 @@ export class FlowNetwork {
    * Selects which exit port water should take from a pipe.
    * Uses longest-path heuristic with memoization.
    */
-  private getNextExit(
-    pipe: Pipe,
-    entryDir: Direction,
-    memo: Map<string, { direction: Direction | null; length: number }>
-  ): Direction | null {
+  private selectExitDirection(pipe: Pipe, entryDir: Direction): Direction | null {
     const openPorts = pipe.openPorts.filter(d => d !== entryDir);
     if (openPorts.length === 0) return null;
 
+    // Get available (unvisited) ports
     const visited = this.visitedPorts.get(pipe);
     const availablePorts = openPorts.filter(d => !visited?.has(d));
-    if (availablePorts.length === 1) return availablePorts[0];
-    if (availablePorts.length === 0) return null;
 
-    const { direction, length } = this.calculateLongestPath(pipe, entryDir, new Set(), memo);
+    // If only one choice, take it
+    if (availablePorts.length === 1) {
+      return availablePorts[0];
+    }
+
+    // If no unvisited ports, flow ends
+    if (availablePorts.length === 0) {
+      return null;
+    }
+
+    // Use longest-path heuristic to choose best exit
+    const { direction } = this.calculateLongestPath(pipe, entryDir, new Set());
     if (direction) {
-      this.logger.debug(`Selected exit ${direction.name} from ${pipe.position} (longest path: ${length} steps)`);
+      this.logger.debug(`Selected exit ${direction.name} from ${pipe.position} (longest path)`);
       return direction;
     }
 
@@ -190,7 +204,9 @@ export class FlowNetwork {
 
   /** Marks a port as visited (water has flowed through it). */
   private markVisited(pipe: Pipe, dir: Direction): void {
-    if (!this.visitedPorts.has(pipe)) this.visitedPorts.set(pipe, new Set());
+    if (!this.visitedPorts.has(pipe)) {
+      this.visitedPorts.set(pipe, new Set());
+    }
     this.visitedPorts.get(pipe)!.add(dir);
   }
 
@@ -198,15 +214,15 @@ export class FlowNetwork {
    * Calculates the longest path from a pipe/direction combination.
    * Uses memoization to avoid recalculating the same paths.
    */
-  private calculateLongestPath(
-    pipe: Pipe,
-    entryDir: Direction,
-    visitedInPath: Set<Pipe>,
-    memo: Map<string, { direction: Direction | null; length: number }>
-  ): { direction: Direction | null; length: number } {
-    const key = `${pipe.position.toString()},${entryDir.name}`;
-    if (memo.has(key)) return memo.get(key)!;
+  private calculateLongestPath(pipe: Pipe, entryDir: Direction, visitedInPath: Set<Pipe>): PathResult {
+    // Check cache first
+    const cacheKey = this.createCacheKey(pipe, entryDir);
+    const cached = this.pathCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
+    // Mark this pipe as visited in current path
     visitedInPath.add(pipe);
 
     let bestDirection: Direction | null = null;
@@ -215,22 +231,67 @@ export class FlowNetwork {
     const openPorts = pipe.openPorts.filter(d => d !== entryDir);
 
     for (const exitDir of openPorts) {
-      const nextPipe = pipe.getNeighbor(exitDir, this.grid);
-      if (!nextPipe || !nextPipe.accepts(exitDir.opposite)) continue;
+      const nextPipe = this.grid.getNeighborPipe(pipe.position, exitDir);
+      // Skip if no neighbor or can't connect
+      if (!nextPipe || !nextPipe.accepts(exitDir.opposite)) {
+        continue;
+      }
 
-      if (visitedInPath.has(nextPipe)) continue;
+      // Skip if we'd create a cycle
+      if (visitedInPath.has(nextPipe)) {
+        continue;
+      }
 
+      // Recursively calculate downstream path length
       const subVisited = new Set(visitedInPath);
-      const { length: downstreamLength } = this.calculateLongestPath(nextPipe, exitDir.opposite, subVisited, memo);
+      const { length: downstreamLength } = this.calculateLongestPath(
+        nextPipe,
+        exitDir.opposite,
+        subVisited
+      );
 
-      if (1 + downstreamLength > maxLength) {
-        maxLength = 1 + downstreamLength;
+      const totalLength = 1 + downstreamLength;
+      if (totalLength > maxLength) {
+        maxLength = totalLength;
         bestDirection = exitDir;
       }
     }
 
-    const result = { direction: bestDirection, length: Math.max(0, maxLength) };
-    memo.set(key, result);
+    // Cache and return result
+    const result: PathResult = {
+      direction: bestDirection,
+      length: Math.max(0, maxLength),
+    };
+
+    this.pathCache.set(cacheKey, result);
     return result;
+  }
+
+  /** Creates a unique cache key for a pipe and entry direction. */
+  private createCacheKey(pipe: Pipe, entryDir: Direction): PathCacheKey {
+    return `${pipe.position.toString()},${entryDir.name}`;
+  }
+
+  /**
+   * Invalidates cached paths that involve a specific pipe.
+   * Call this when a pipe is placed or removed.
+   */
+  invalidatePathCache(affectedPipe: Pipe): void {
+    const keysToDelete: PathCacheKey[] = [];
+    for (const key of this.pathCache.keys()) {
+      if (key.startsWith(affectedPipe.position.toString())) {
+        keysToDelete.push(key);
+      }
+    }
+
+    for (const key of keysToDelete) {
+      this.pathCache.delete(key);
+    }
+
+    if (keysToDelete.length > 0) {
+      this.logger.debug(
+        `Invalidated ${keysToDelete.length} cache entries for ${affectedPipe.position}`
+      );
+    }
   }
 }
