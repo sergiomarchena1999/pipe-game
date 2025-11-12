@@ -1,6 +1,6 @@
 import type { ILogger } from "./logging/ILogger";
-import type { Grid } from "./Grid";
-import type { Pipe } from "./Pipe";
+import type { Grid } from "./domain/grid/Grid";
+import type { Pipe } from "./domain/pipe/Pipe";
 
 
 /** Tracks the number of pipes successfully connected to the start. */

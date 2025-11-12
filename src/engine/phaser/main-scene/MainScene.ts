@@ -56,6 +56,7 @@ export class MainScene extends Phaser.Scene {
       this, 
       this.config, 
       this.worldContainer,
+      this.state.flowNetwork,
       this.logger
     );
 
@@ -91,9 +92,9 @@ export class MainScene extends Phaser.Scene {
       this.assetRenderer.addPipe(startPipe);
     });
 
-    this.state.on("bombStarted", (cell, durationMs) => {
-      this.assetRenderer.startBombAnimation(cell, durationMs, () => {
-        this.logger.debug(`Bomb animation completed at ${cell}`);
+    this.state.on("bombStarted", (pos, durationMs) => {
+      this.assetRenderer.startBombAnimation(pos, durationMs, () => {
+        this.logger.debug(`Bomb animation completed at ${pos}`);
       });
     });
 

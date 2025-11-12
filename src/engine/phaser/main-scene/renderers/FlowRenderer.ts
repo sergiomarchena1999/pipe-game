@@ -1,7 +1,6 @@
 import type { WorldContainer } from "../../WorldContainer";
 import type { IGameConfig } from "../../../../config/GameConfig";
-import { FlowNetwork } from "../../../../core/FlowNetwork";
-
+import { FlowNetwork } from "../../../../core/domain/flow/FlowNetwork";
 
 /** Handles rendering of flow animations and preview */
 export class FlowRenderer {
@@ -10,7 +9,8 @@ export class FlowRenderer {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly config: IGameConfig,
-    private readonly world: WorldContainer
+    private readonly world: WorldContainer,
+    private readonly flowNetwork: FlowNetwork // pass instance
   ) {
     this.graphics = this.scene.add.graphics({
       lineStyle: { width: 3, color: 0x00ffff }
@@ -29,14 +29,10 @@ export class FlowRenderer {
     const { cellSize } = this.config.grid;
     const half = cellSize / 2;
 
-    const visited = FlowNetwork.getVisitedPortsSnapshot();
-    
-    for (const entry of visited) {
-      const center = this.world.gridToLocal(
-        entry.pipe.position.x,
-        entry.pipe.position.y
-      );
+    const visited = this.flowNetwork.getVisitedPortsSnapshot();
 
+    for (const entry of visited) {
+      const center = this.world.gridToLocal(entry.pipe.position); // use GridPosition
       for (const dir of entry.dirs) {
         const endX = center.x + dir.dx * half;
         const endY = center.y + dir.dy * half;
@@ -48,16 +44,14 @@ export class FlowRenderer {
   }
 
   private renderActiveFlow(): void {
-    const state = FlowNetwork.getActiveState();
+    const state = this.flowNetwork.getActiveState();
     if (!state) return;
 
     const { pipe, entryDir, exitDir, progress } = state;
     const { cellSize } = this.config.grid;
     const half = cellSize / 2;
 
-    const center = this.world.gridToLocal(pipe.position.x, pipe.position.y);
-
-    // Determine entry point
+    const center = this.world.gridToLocal(pipe.position);
     const entryPoint = entryDir
       ? {
           x: center.x + entryDir.dx * half,

@@ -1,4 +1,5 @@
 import type { IGameConfig } from "../../config/GameConfig";
+import { GridPosition } from "../../core/domain/grid/GridPosition";
 
 
 /**
@@ -24,13 +25,10 @@ export class WorldContainer {
     this.background = this.scene.add
       .tileSprite(0, 0, this.scene.scale.width, this.scene.scale.height, "tile-background")
       .setOrigin(0)
-      .setScrollFactor(0) // Keep background fixed to camera
+      .setScrollFactor(0)
       .setDepth(-10);
 
-    // Initial positioning
     this.repositionContainer();
-
-    // Auto-reposition on resize
     this.scene.scale.on("resize", this.handleResize, this);
   }
 
@@ -46,52 +44,40 @@ export class WorldContainer {
   }
 
   /**
-   * Convert world coordinates (relative to canvas) to grid indices.
-   * Returns null if outside grid bounds.
+   * Convert world coordinates (canvas) to GridPosition.
+   * Returns null if outside bounds.
    */
-  worldToGrid(worldX: number, worldY: number): { x: number; y: number } | null {
-    // Convert canvas coordinates to container-local coordinates
+  worldToGrid(worldX: number, worldY: number): GridPosition | null {
     const localX = worldX - this.container.x;
     const localY = worldY - this.container.y;
 
-    const gridX = Math.floor(localX / this.cellSize);
-    const gridY = Math.floor(localY / this.cellSize);
+    const gx = Math.floor(localX / this.cellSize);
+    const gy = Math.floor(localY / this.cellSize);
 
-    if (gridX < 0 || gridY < 0 || gridX >= this.gridWidth || gridY >= this.gridHeight) {
-      return null;
-    }
-
-    return { x: gridX, y: gridY };
+    return GridPosition.create(gx, gy, this.gridWidth, this.gridHeight);
   }
 
-  /** Convert grid indices to container-local coordinates (center of cell) */
-  gridToLocal(x: number, y: number): { x: number; y: number } {
+  /** Convert GridPosition to container-local coordinates (cell center) */
+  gridToLocal(pos: GridPosition): { x: number; y: number } {
     return {
-      x: x * this.cellSize + this.cellSize / 2,
-      y: y * this.cellSize + this.cellSize / 2,
+      x: pos.x * this.cellSize + this.cellSize / 2,
+      y: pos.y * this.cellSize + this.cellSize / 2,
     };
   }
 
-  /** Get top-left corner of a grid cell in container-local coordinates */
-  gridToLocalCorner(x: number, y: number): { x: number; y: number } {
+  /** Convert GridPosition to top-left corner in container-local coordinates */
+  gridToLocalCorner(pos: GridPosition | { x: number; y: number }): { x: number; y: number } {
     return {
-      x: x * this.cellSize,
-      y: y * this.cellSize,
+      x: pos.x * this.cellSize,
+      y: pos.y * this.cellSize,
     };
   }
 
-  /** Get the position where the queue should start (left of grid) */
+  /** Get starting position for the queue (left of grid) */
   getQueuePosition(): { x: number; y: number; startY: number } {
-    // Queue is positioned 1 cell to the left of the grid
     const queueX = -this.cellSize * 2 - this.cellSize / 2;
-
-    // Center the queue vertically relative to the grid
     const gridCenterY = (this.gridHeight * this.cellSize) / 2;
-    return {
-      x: queueX,
-      y: gridCenterY,
-      startY: 0 // Queue items will be positioned relative to this
-    };
+    return { x: queueX, y: gridCenterY, startY: 0 };
   }
 
   /** Get total grid dimensions in pixels */
@@ -102,13 +88,13 @@ export class WorldContainer {
     };
   }
 
-  /** Handle resizing: adjust both container and background */
+  /** Handle resizing */
   private handleResize(gameSize: Phaser.Structs.Size): void {
     this.background.setSize(gameSize.width, gameSize.height);
     this.repositionContainer();
   }
 
-  /** Centers the container in the viewport */
+  /** Center the container in the viewport */
   private repositionContainer(): void {
     const gridPixelWidth = this.gridWidth * this.cellSize;
     const gridPixelHeight = this.gridHeight * this.cellSize;
@@ -122,7 +108,7 @@ export class WorldContainer {
     this.container.setPosition(offsetX, offsetY);
   }
 
-  /** Cleanup when scene is destroyed */
+  /** Cleanup */
   destroy(): void {
     this.scene.scale.off("resize", this.repositionContainer, this);
     this.container.destroy();

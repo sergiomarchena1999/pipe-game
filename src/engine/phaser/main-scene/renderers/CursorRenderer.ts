@@ -48,7 +48,7 @@ export class CursorRenderer {
       return;
     }
 
-    const pos = this.world.gridToLocalCorner(gridPos.x, gridPos.y);
+    const pos = this.world.gridToLocalCorner(gridPos);
     this.gridCursor.setPosition(pos.x, pos.y).setVisible(true);
   }
 

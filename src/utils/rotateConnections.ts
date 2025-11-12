@@ -1,4 +1,4 @@
-import { Direction } from "../core/Direction";
+import { Direction } from "../core/domain/Direction";
 
 
 /**

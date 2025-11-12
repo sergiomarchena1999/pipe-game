@@ -1,4 +1,5 @@
-import type { Pipe } from "./Pipe";
+import type { Pipe } from "../pipe/Pipe";
+import type { GridPosition } from "./GridPosition";
 
 /**
  * Represents a single cell within the grid.
@@ -8,14 +9,7 @@ export class GridCell {
   private _pipe: Pipe | null = null;
   private _blocked = false;
 
-  constructor(
-    public readonly x: number,
-    public readonly y: number
-  ) {
-    if (x < 0 || y < 0) {
-      throw new Error(`Invalid cell coordinates: (${x}, ${y})`);
-    }
-  }
+  constructor(public readonly position: GridPosition) {}
 
   /** Returns true if cell is blocked. */
   get blocked(): boolean {
@@ -30,7 +24,7 @@ export class GridCell {
   /** Places a pipe in this cell, replacing any existing pipe. */
   set pipe(pipe: Pipe) {
     if (this._blocked) {
-      throw new Error(`Cannot place pipe on blocked cell (${this.x}, ${this.y})`);
+      throw new Error(`Cannot place pipe on blocked cell (${this.position})`);
     }
     this._pipe = pipe;
   }
@@ -58,6 +52,6 @@ export class GridCell {
 
   /** Returns a string representation of this cell's position. */
   toString(): string {
-    return `(${this.x}, ${this.y})${this._blocked ? "[BLOCKED]" : ""}`;
+    return `(${this.position} ${this._blocked ? "[BLOCKED]" : ""}`;
   }
 }

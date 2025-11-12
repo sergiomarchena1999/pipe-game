@@ -1,10 +1,12 @@
 import type { WorldContainer } from "../WorldContainer";
 import type { IGameConfig } from "../../../config/GameConfig";
 import type { ILogger } from "../../../core/logging/ILogger";
-import type { PipeQueue } from "../../../core/PipeQueue";
-import type { GridCell } from "../../../core/GridCell";
-import type { Grid } from "../../../core/Grid";
-import type { Pipe } from "../../../core/Pipe";
+
+import type { GridPosition } from "../../../core/domain/grid/GridPosition";
+import type { FlowNetwork } from "../../../core/domain/flow/FlowNetwork";
+import type { PipeQueue } from "../../../core/domain/pipe/PipeQueue";
+import type { Grid } from "../../../core/domain/grid/Grid";
+import type { Pipe } from "../../../core/domain/pipe/Pipe";
 
 import { CursorRenderer } from "./renderers/CursorRenderer";
 import { QueueRenderer } from "./renderers/QueueRenderer";
@@ -29,6 +31,7 @@ export class AssetRenderer {
     scene: Phaser.Scene,
     config: IGameConfig,
     private readonly worldContainer: WorldContainer,
+    flowNetwork: FlowNetwork,
     logger: ILogger
   ) {
     // Initialize specialized renderers with world container
@@ -36,7 +39,7 @@ export class AssetRenderer {
     this.cursorRenderer = new CursorRenderer(scene, worldContainer, logger);
     this.pipeRenderer = new PipeRenderer(scene, worldContainer);
     this.queueRenderer = new QueueRenderer(scene, config, worldContainer, logger);
-    this.flowRenderer = new FlowRenderer(scene, config, worldContainer);
+    this.flowRenderer = new FlowRenderer(scene, config, worldContainer, flowNetwork);
   }
 
   renderGridBackground(grid: Grid): void {
@@ -49,8 +52,8 @@ export class AssetRenderer {
   }
 
   /** Removes a pipe sprite from the grid. */
-  removePipe(cell: GridCell): void {
-    this.pipeRenderer.remove(cell);
+  removePipe(pos: GridPosition): void {
+    this.pipeRenderer.remove(pos);
   }
 
   renderQueue(queue: PipeQueue): void {
@@ -70,16 +73,16 @@ export class AssetRenderer {
   }
 
   /** Starts a bomb animation at the specified grid cell. */
-  startBombAnimation(cell: GridCell, durationMs: number, onComplete?: () => void): void {
-    this.pipeRenderer.startBombAnimation(cell, durationMs, onComplete);
+  startBombAnimation(pos: GridPosition, durationMs: number, onComplete?: () => void): void {
+    this.pipeRenderer.startBombAnimation(pos, durationMs, onComplete);
   }
 
-  worldToGrid(worldX: number, worldY: number): { x: number; y: number } | null {
+  worldToGrid(worldX: number, worldY: number): GridPosition | null {
     return this.worldContainer.worldToGrid(worldX, worldY);
   }
 
-  gridToWorld(x: number, y: number): { x: number; y: number } {
-    return this.worldContainer.gridToLocal(x, y);
+  gridToWorld(pos: GridPosition): { x: number; y: number } {
+    return this.worldContainer.gridToLocal(pos);
   }
 
   /** Clean up all resources */

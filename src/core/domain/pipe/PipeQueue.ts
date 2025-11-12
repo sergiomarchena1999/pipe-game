@@ -1,8 +1,8 @@
-import { PipeShapes, PipeType, type PipeShape } from "./constants/PipeShapes";
+import { PipeShapes, PipeType, type PipeShape } from "../../constants/PipeShapes";
 import { EventEmitter } from "eventemitter3";
-import { Direction } from "./Direction";
+import { Direction } from "../Direction";
 
-import type { ILogger } from "./logging/ILogger";
+import type { ILogger } from "../../logging/ILogger";
 import type { PipeBase } from "./PipeBase";
 
 

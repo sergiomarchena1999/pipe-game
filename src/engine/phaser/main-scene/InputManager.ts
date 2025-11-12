@@ -1,3 +1,4 @@
+import type { GridPosition } from "../../../core/domain/grid/GridPosition";
 import type { GameState } from "../../../core/GameState";
 import type { ILogger } from "../../../core/logging/ILogger";
 import { AssetRenderer } from "./AssetRenderer";
@@ -32,22 +33,18 @@ export class InputManager {
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     try {
-      // Prefer world coordinates which account for the camera / transforms.
-      // Phaser's pointer often has worldX/worldY available (depending on version)
       const worldX = (pointer as any).worldX ?? pointer.x;
       const worldY = (pointer as any).worldY ?? pointer.y;
 
-      const gridPos = this.renderer.worldToGrid(worldX, worldY);
+      const gridPos: GridPosition | null = this.renderer.worldToGrid(worldX, worldY);
       if (!gridPos) {
         this.logger.debug(`Pointer outside grid: world=(${worldX}, ${worldY})`);
         return;
       }
 
-      const { x: gridX, y: gridY } = gridPos;
-
-      const placed = this.state.placeNextPipe(gridX, gridY);
+      const placed = this.state.placeNextPipe(gridPos);
       if (!placed) {
-        this.logger.debug(`Placement rejected at (${gridX}, ${gridY})`);
+        this.logger.debug(`Placement rejected at ${gridPos}`);
         return;
       }
 

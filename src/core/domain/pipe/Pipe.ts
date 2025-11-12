@@ -1,7 +1,9 @@
-import { rotateConnections } from "../utils/RotateConnections";
-import type { PipeShape } from "./constants/PipeShapes";
-import type { GridCell } from "./GridCell";
-import { Direction } from "./Direction";
+import { rotateConnections } from "../../../utils/RotateConnections";
+import type { GridPosition } from "../grid/GridPosition";
+import type { PipeShape } from "../../constants/PipeShapes";
+import type { Grid } from "../grid/Grid";
+
+import { Direction } from "../Direction";
 import { PipeBase } from "./PipeBase";
 
 
@@ -20,7 +22,7 @@ export class Pipe extends PipeBase {
   private _bombStartTime: number = 0;
 
   constructor(
-    public readonly position: GridCell,
+    public readonly position: GridPosition,
     readonly shape: PipeShape,
     readonly direction: Direction
   ) {
@@ -40,6 +42,11 @@ export class Pipe extends PipeBase {
   /** Returns a boolean indicating if the pipe has any port being used */
   get blocked() : boolean {
     return [...this.ports.values()].filter(p => p.used).length > 0 || this._isBeingBombed;
+  }
+
+  getNeighbor(direction: Direction, grid: Grid): Pipe | null {
+    const neighborCell = grid.getValidNeighbor(this.position, direction);
+    return neighborCell?.pipe ?? null;
   }
 
   startBombAnimation(currentTime: number): void {
@@ -77,6 +84,6 @@ export class Pipe extends PipeBase {
   /** Returns a string representation for debugging. */
   toString(): string {
     const portDirs = this.openPorts.map(d => d.toString()).join(",");
-    return `${this.assetKey}(${portDirs}) at ${this.position.x},${this.position.y}`;
+    return `${this.assetKey}(${portDirs}) at ${this.position}`;
   }
 }

@@ -1,6 +1,6 @@
 import type { WorldContainer } from "../../WorldContainer";
 import type { IGameConfig } from "../../../../config/GameConfig";
-import type { PipeQueue } from "../../../../core/PipeQueue";
+import type { PipeQueue } from "../../../../core/domain/pipe/PipeQueue";
 import type { ILogger } from "../../../../core/logging/ILogger";
 
 

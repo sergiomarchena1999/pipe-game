@@ -1,5 +1,5 @@
-import type { PipeShape } from "./constants/PipeShapes";
-import { Direction } from "./Direction";
+import type { PipeShape } from "../../constants/PipeShapes";
+import { Direction } from "../Direction";
 
 
 /**

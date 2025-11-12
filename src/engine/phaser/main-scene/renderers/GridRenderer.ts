@@ -1,7 +1,9 @@
 import type { WorldContainer } from "../../WorldContainer";
 import type { IGameConfig } from "../../../../config/GameConfig";
 import type { ILogger } from "../../../../core/logging/ILogger";
-import type { Grid } from "../../../../core/Grid";
+import type { Grid } from "../../../../core/domain/grid/Grid";
+import { GridPosition } from "../../../../core/domain/grid/GridPosition";
+
 
 /** Handles rendering of the grid background and border */
 export class GridRenderer {
@@ -16,30 +18,29 @@ export class GridRenderer {
     const { width, height, cellSize } = this.config.grid;
     const halfSize = cellSize / 2;
 
-    // Draw borders including a "padding" around the grid
+    /** Helper to draw a border sprite at raw x,y coordinates */
     const drawBorder = (x: number, y: number, angle: number) => {
-      const pos = this.world.gridToLocalCorner(x, y);
+      const local = this.world.gridToLocalCorner({x, y}); // Use raw numbers
       const sprite = this.scene.add
-        .image(pos.x + halfSize, pos.y + halfSize, "grid-border-side")
+        .image(local.x + halfSize, local.y + halfSize, "grid-border-side")
         .setOrigin(0.5)
         .setAngle(angle)
         .setDepth(1);
-      
       this.world.add(sprite);
     };
 
+    /** Helper to draw a corner sprite at raw x,y coordinates */
     const drawCorner = (x: number, y: number, angle: number) => {
-      const pos = this.world.gridToLocalCorner(x, y);
+      const local = this.world.gridToLocalCorner({x, y});
       const sprite = this.scene.add
-        .image(pos.x + halfSize, pos.y + halfSize, "grid-border-corner")
+        .image(local.x + halfSize, local.y + halfSize, "grid-border-corner")
         .setOrigin(0.5)
         .setAngle(angle)
         .setDepth(1);
-      
       this.world.add(sprite);
     };
 
-    // Top and bottom borders
+    // Top and bottom borders (use raw numbers)
     for (let x = -1; x <= width; x++) {
       drawBorder(x, -1, 0);       // Top
       drawBorder(x, height, 180); // Bottom
@@ -57,18 +58,19 @@ export class GridRenderer {
     drawCorner(-1, height, -90);     // Bottom-left
     drawCorner(width, height, 180);  // Bottom-right
 
-    // Draw the grid cells on top
+    // Draw the grid cells (these ARE valid GridPositions)
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const cell = grid.getCell(x, y);
-        const pos = this.world.gridToLocalCorner(x, y);
+        const pos = GridPosition.create(x, y, width, height)!; // Always valid in bounds
+        const cell = grid.getCell(pos);
+        const local = this.world.gridToLocalCorner(pos);
 
         const assetKey = cell.blocked ? "grid-block" : "grid-cell";
         const sprite = this.scene.add
-          .image(pos.x, pos.y, assetKey)
+          .image(local.x, local.y, assetKey)
           .setOrigin(0)
           .setDepth(2);
-        
+
         this.world.add(sprite);
       }
     }

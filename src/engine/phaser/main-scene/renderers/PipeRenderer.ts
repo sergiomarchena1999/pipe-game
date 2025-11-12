@@ -1,13 +1,13 @@
 import type { WorldContainer } from "../../WorldContainer";
-import type { GridCell } from "../../../../core/GridCell";
-import type { Pipe } from "../../../../core/Pipe";
+import type { GridPosition } from "../../../../core/domain/grid/GridPosition";
+import type { Pipe } from "../../../../core/domain/pipe/Pipe";
 
 
 /** Handles rendering individual pipes on the grid */
 export class PipeRenderer {
-  private readonly pipeSprites = new Map<GridCell, Phaser.GameObjects.Image>();
-  private readonly bombSprites = new Map<GridCell, Phaser.GameObjects.Image>();
-  private readonly bombTimers = new Map<GridCell, Phaser.Time.TimerEvent[]>();
+  private readonly pipeSprites = new Map<GridPosition, Phaser.GameObjects.Image>();
+  private readonly bombSprites = new Map<GridPosition, Phaser.GameObjects.Image>();
+  private readonly bombTimers = new Map<GridPosition, Phaser.Time.TimerEvent[]>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -15,7 +15,7 @@ export class PipeRenderer {
   ) {}
 
   render(pipe: Pipe): void {
-    const pos = this.world.gridToLocal(pipe.position.x, pipe.position.y);
+    const pos = this.world.gridToLocal(pipe.position);
     const sprite = this.scene.add
       .image(pos.x, pos.y, pipe.assetKey)
       .setOrigin(0.5)
@@ -32,11 +32,10 @@ export class PipeRenderer {
    * @param durationMs - Total duration of the animation in milliseconds
    * @param onComplete - Callback when animation completes
    */
-  startBombAnimation(cell: GridCell, durationMs: number, onComplete?: () => void): void {
+  startBombAnimation(posObj: GridPosition, durationMs: number, onComplete?: () => void): void {
     // Stop any existing animation at this cell
-    this.stopBombAnimation(cell);
-
-    const pos = this.world.gridToLocal(cell.x, cell.y);
+    this.stopBombAnimation(posObj);
+    const pos = this.world.gridToLocal(posObj);
     
     // Create bomb sprite
     const bombSprite = this.scene.add
@@ -47,7 +46,7 @@ export class PipeRenderer {
 
     // Phase 1: Show bomb-idle for half the duration (already set)
     this.world.add(bombSprite);
-    this.bombSprites.set(cell, bombSprite);
+    this.bombSprites.set(posObj, bombSprite);
 
     // Calculate timings
     const halfDuration = durationMs / 2;
@@ -78,55 +77,55 @@ export class PipeRenderer {
 
     // Cleanup after full duration
     const cleanupTimer = this.scene.time.delayedCall(durationMs, () => {
-      this.cleanupBombAnimation(cell);
+      this.cleanupBombAnimation(posObj);
       onComplete?.();
     });
 
     timers.push(cleanupTimer);
 
-    this.bombTimers.set(cell, timers);
+    this.bombTimers.set(posObj, timers);
   }
 
-  /** Stops bomb animation at a specific cell */
-  stopBombAnimation(cell: GridCell): void {
-    const timers = this.bombTimers.get(cell);
+  /** Stops bomb animation at a specific position */
+  stopBombAnimation(posObj: GridPosition): void {
+    const timers = this.bombTimers.get(posObj);
     if (timers) {
       timers.forEach(timer => timer.remove());
-      this.bombTimers.delete(cell);
+      this.bombTimers.delete(posObj);
     }
-    this.cleanupBombAnimation(cell);
+    this.cleanupBombAnimation(posObj);
   }
 
-  /** Cleans up bomb sprite at a cell */
-  private cleanupBombAnimation(cell: GridCell): void {
-    const bombSprite = this.bombSprites.get(cell);
+  /** Cleans up bomb sprite at a posObj */
+  private cleanupBombAnimation(posObj: GridPosition): void {
+    const bombSprite = this.bombSprites.get(posObj);
     if (bombSprite) {
       bombSprite.destroy();
-      this.bombSprites.delete(cell);
+      this.bombSprites.delete(posObj);
     }
 
     // Clean up timers
-    const timers = this.bombTimers.get(cell);
+    const timers = this.bombTimers.get(posObj);
     if (timers) {
       timers.forEach(timer => timer.remove());
-      this.bombTimers.delete(cell);
+      this.bombTimers.delete(posObj);
     }
   }
 
-  /** Get sprite for a specific grid cell (useful for animations/removal) */
-  getSprite(cell: GridCell): Phaser.GameObjects.Image | undefined {
-    return this.pipeSprites.get(cell);
+  /** Get sprite for a specific grid position (useful for animations/removal) */
+  getSprite(posObj: GridPosition): Phaser.GameObjects.Image | undefined {
+    return this.pipeSprites.get(posObj);
   }
 
   /** Remove sprite at specific position */
-  remove(cell: GridCell): boolean {
+  remove(posObj: GridPosition): boolean {
     // Stop any bomb animation first
-    this.stopBombAnimation(cell);
+    this.stopBombAnimation(posObj);
 
-    const sprite = this.pipeSprites.get(cell);
+    const sprite = this.pipeSprites.get(posObj);
     if (sprite) {
       sprite.destroy();
-      this.pipeSprites.delete(cell);
+      this.pipeSprites.delete(posObj);
       return true;
     }
     return false;

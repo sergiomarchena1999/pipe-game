@@ -1,10 +1,10 @@
 import type { IBombConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
-import type { Direction } from "./Direction";
-import type { PipeQueue } from "./PipeQueue";
-import type { GridCell } from "./GridCell";
-import type { Grid } from "./Grid";
-import { Pipe } from "./Pipe";
+import type { GridPosition } from "./domain/grid/GridPosition";
+import type { Direction } from "./domain/Direction";
+import type { PipeQueue } from "./domain/pipe/PipeQueue";
+import type { Grid } from "./domain/grid/Grid";
+import { Pipe } from "./domain/pipe/Pipe";
 
 
 export interface BombInfo {
@@ -15,7 +15,7 @@ export interface BombInfo {
 }
 
 interface BombEvents {
-  onBombStarted: (cell: GridCell, durationMs: number) => void;
+  onBombStarted: (pos: GridPosition, durationMs: number) => void;
   onBombCompleted: (newPipe: Pipe) => void;
 }
 
@@ -101,7 +101,7 @@ export class BombController {
   /** Completes a bomb by removing the old pipe and placing the replacement. */
   private completeBomb(bombInfo: BombInfo): void {
     const { pipe: oldPipe } = bombInfo;
-    const cell = oldPipe.position;
+    const cell = this.grid.getCell(oldPipe.position);
 
     // Remove from tracking
     this.bombingPipes.delete(oldPipe);
@@ -109,13 +109,19 @@ export class BombController {
 
     // Remove old pipe
     this.grid.removePipe(cell);
-    this.logger.debug(`Bomb completed at ${cell}`);
+    this.logger.debug(`Bomb completed at ${cell.position}`);
 
+    // Dequeue replacement pipe
     const queued = this.queue.dequeue();
-    const newPipe = new Pipe(cell, queued.shape, queued.direction);
+    if (!queued) {
+      this.logger.warn("No pipe in queue to replace bombed pipe");
+      return;
+    }
+
+    const newPipe = new Pipe(cell.position, queued.shape, queued.direction);
     this.grid.setPipe(cell, newPipe);
 
-    this.logger.info(`Replaced pipe at ${cell} with ${queued.shape.id} dir=${queued.direction}`);
+    this.logger.info(`Replaced pipe at ${cell.position} with ${queued.shape.id} dir=${queued.direction}`);
     
     // Emit completion event
     this.events.onBombCompleted(newPipe);
