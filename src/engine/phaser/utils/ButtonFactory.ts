@@ -37,7 +37,7 @@ export class ButtonFactory {
     // Create button text
     const label = this.scene.add.text(0, 0, text, {
       fontSize,
-      color: UIConfig.TEXT.COLOR_WHITE,
+      color: UIConfig.TEXT.COLOR_LIGHT,
       fontFamily: UIConfig.TEXT.FONT_FAMILY
     }).setOrigin(0.5);
 

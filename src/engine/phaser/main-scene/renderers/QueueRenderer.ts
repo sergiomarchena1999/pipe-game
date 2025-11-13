@@ -2,6 +2,7 @@ import type { WorldContainer } from "../../WorldContainer";
 import type { IGameConfig } from "../../../../config/GameConfig";
 import type { PipeQueue } from "../../../../core/domain/pipe/PipeQueue";
 import type { ILogger } from "../../../../core/logging/ILogger";
+import { UIConfig } from "../../../../config/UIConfig";
 
 
 /** Handles rendering the pipe queue with sprite pooling for performance */
@@ -34,7 +35,7 @@ export class QueueRenderer {
         .image(local.x + halfSize, local.y + halfSize, "queue-side")
         .setOrigin(0.5)
         .setAngle(angle)
-        .setDepth(98);
+        .setDepth(UIConfig.DEPTH.QUEUE_BORDER);
       this.world.add(sprite);
     };
 
@@ -45,7 +46,7 @@ export class QueueRenderer {
         .image(local.x + halfSize, local.y + halfSize, "queue-corner")
         .setOrigin(0.5)
         .setAngle(angle)
-        .setDepth(99);
+        .setDepth(UIConfig.DEPTH.QUEUE_BORDER);
       this.world.add(sprite);
     };
 
@@ -68,7 +69,7 @@ export class QueueRenderer {
     const sprite = this.scene.add
       .image(local.x, local.y, "queue-selected")
       .setOrigin(0)
-      .setDepth(97);
+      .setDepth(UIConfig.DEPTH.QUEUE_SELECTED);
     this.world.add(sprite);
 
     this.logger.debug(`Queue border rendered: ${queueWidth}x${queueHeight} cells`);
@@ -115,7 +116,7 @@ export class QueueRenderer {
     const sprite = this.scene.add
       .image(0, 0, "placeholder")
       .setOrigin(0.5)
-      .setDepth(100);
+      .setDepth(UIConfig.DEPTH.QUEUE_ITEMS);
     
     this.world.add(sprite);
     return sprite;

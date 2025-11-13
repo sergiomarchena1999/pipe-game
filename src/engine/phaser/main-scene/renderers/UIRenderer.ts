@@ -48,7 +48,7 @@ export class UIRenderer {
       `Pipes: 0/${targetScore} | Score: 0`,
       {
         fontSize: UIConfig.TEXT.SCORE_SIZE,
-        color: UIConfig.TEXT.COLOR_WHITE,
+        color: UIConfig.TEXT.COLOR_LIGHT,
         padding: { x: 12, y: 8 }
       }
     ).setOrigin(0, 0);
@@ -93,7 +93,7 @@ export class UIRenderer {
   }
 
   private createOverlay(width: number, height: number): void {
-    this.overlay = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.7)
+    this.overlay = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.8)
       .setOrigin(0)
       .setDepth(UIConfig.DEPTH.OVERLAY)
       .setScrollFactor(0)
@@ -116,9 +116,7 @@ export class UIRenderer {
       `Final Score: ${score}\nPipes Connected: ${pipesFlowed}`,
       {
         fontSize: UIConfig.TEXT.STATS_SIZE,
-        color: UIConfig.TEXT.COLOR_WHITE,
-        stroke: UIConfig.TEXT.STROKE_COLOR,
-        strokeThickness: UIConfig.TEXT.STROKE_THICKNESS,
+        color: UIConfig.TEXT.COLOR_LIGHT,
         align: "center"
       }
     ).setOrigin(0.5).setAlpha(0);
@@ -188,7 +186,7 @@ export class UIRenderer {
       "Back to Menu",
       {
         fontSize: UIConfig.TEXT.SCORE_SIZE,
-        color: UIConfig.TEXT.COLOR_WHITE,
+        color: UIConfig.TEXT.COLOR_LIGHT,
         padding: { x: 12, y: 6 }
       }
     )

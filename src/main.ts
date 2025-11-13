@@ -27,7 +27,6 @@ function initializeApplication(): void {
   // Dynamically import MainScene only when starting game
   (window as any).loadMainScene = async () => {
     const { MainScene } = await import("./engine/phaser/main-scene/MainScene");
-    game.scene.add("MainScene", MainScene, false);
     return MainScene;
   };
 }
