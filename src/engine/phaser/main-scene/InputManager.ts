@@ -4,12 +4,6 @@ import type { ILogger } from "../../../core/logging/ILogger";
 import { AssetRenderer } from "./AssetRenderer";
 
 
-/** Extended Phaser pointer type with world coordinates */
-interface WorldPointer extends Phaser.Input.Pointer {
-  readonly worldX: number;
-  readonly worldY: number;
-}
-
 /**
  * Centralized input manager for the scene.
  * Handles grid clicks and pointer movement for cursor updates.
@@ -82,11 +76,9 @@ export class InputManager {
   }
 
   private getWorldCoordinates(pointer: Phaser.Input.Pointer): { worldX: number; worldY: number } {
-    const worldPointer = pointer as WorldPointer;
-    return {
-      worldX: worldPointer.worldX ?? pointer.x,
-      worldY: worldPointer.worldY ?? pointer.y
-    };
+    const camera = this.scene.cameras.main;
+    const worldPoint = camera.getWorldPoint(pointer.x, pointer.y);
+    return { worldX: worldPoint.x, worldY: worldPoint.y };
   }
 
   private placePipeAtPosition(gridPos: GridPosition): void {

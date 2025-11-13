@@ -23,7 +23,7 @@ function initializeApplication(): void {
     },
     render: { 
       antialias: true, 
-      pixelArt: false 
+      pixelArt: true 
     },
     scale: {
       mode: Phaser.Scale.RESIZE,

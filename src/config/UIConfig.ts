@@ -64,7 +64,15 @@ export const UIConfig = {
     STATS_OFFSET_Y: -10,
     BUTTON_ROW_OFFSET_Y: 100,
     BUTTON_SPACING: 200
-  }
+  },
+
+  RESPONSIVE: {
+    DESIGN_WIDTH: 640,
+    DESIGN_HEIGHT: 480,
+    MIN_SCALE: 0.5,   // Smallest UI scale when window shrinks
+    MAX_SCALE: 1.0,   // Prevents upscaling beyond design size
+    SCALE_TWEEN_DURATION: 300
+  },
 } as const;
 
 /** Animation configuration presets */

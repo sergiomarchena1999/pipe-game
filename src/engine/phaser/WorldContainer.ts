@@ -1,5 +1,6 @@
 import type { IGameConfig } from "../../config/GameConfig";
 import { GridPosition } from "../../core/domain/grid/GridPosition";
+import { UIConfig } from "../../config/UIConfig";
 
 
 /**
@@ -12,6 +13,10 @@ export class WorldContainer {
   private readonly gridWidth: number;
   private readonly gridHeight: number;
   private background!: Phaser.GameObjects.TileSprite;
+
+  private currentScale = 1;
+  private offsetX = 0;
+  private offsetY = 0;
 
   constructor(private readonly scene: Phaser.Scene, private readonly config: IGameConfig) {
     this.cellSize = config.grid.cellSize;
@@ -32,6 +37,14 @@ export class WorldContainer {
     this.scene.scale.on("resize", this.handleResize, this);
   }
 
+  get scaleFactor(): number {
+    return this.currentScale;
+  }
+
+  get offset(): { x: number; y: number } {
+    return { x: this.offsetX, y: this.offsetY };
+  }
+
   /** Add a game object to the world container */
   add(gameObject: Phaser.GameObjects.GameObject): void {
     this.container.add(gameObject);
@@ -48,8 +61,8 @@ export class WorldContainer {
    * Returns null if outside bounds.
    */
   worldToGrid(worldX: number, worldY: number): GridPosition | null {
-    const localX = worldX - this.container.x;
-    const localY = worldY - this.container.y;
+    const localX = (worldX - this.offsetX) / this.currentScale;
+    const localY = (worldY - this.offsetY) / this.currentScale;
 
     const gx = Math.floor(localX / this.cellSize);
     const gy = Math.floor(localY / this.cellSize);
@@ -108,22 +121,51 @@ export class WorldContainer {
     };
   }
 
+  /** Compute the full width/height including things outside the main grid */
+  getContainerBounds(): { left: number; right: number; top: number; bottom: number } {
+    const gridW = this.gridWidth * this.cellSize;
+    const gridH = this.gridHeight * this.cellSize;
+
+    // Example offsets for your queue and border; adjust if different
+    const queueOffsetX = -3 * this.cellSize; // left queue
+    const borderOffset = -this.cellSize;     // border extends 1 cell
+
+    return {
+      left: Math.min(queueOffsetX, borderOffset),
+      right: gridW + this.cellSize, // right border
+      top: borderOffset,            // top border
+      bottom: gridH + this.cellSize // bottom border
+    };
+  }
+
   /** Handle resizing */
   private handleResize(gameSize: Phaser.Structs.Size): void {
     this.background.setSize(gameSize.width, gameSize.height);
     this.repositionContainer();
   }
 
-  /** Center the container in the viewport */
+  /** Center and scale the container in the viewport */
   private repositionContainer(): void {
-    const gridPixelWidth = this.gridWidth * this.cellSize;
-    const gridPixelHeight = this.gridHeight * this.cellSize;
+    const bounds = this.getContainerBounds();
+    const containerWidth = bounds.right - bounds.left;
+    const containerHeight = bounds.bottom - bounds.top;
 
     const canvasW = this.scene.scale.width;
     const canvasH = this.scene.scale.height;
 
-    const offsetX = (canvasW - gridPixelWidth) / 2;
-    const offsetY = (canvasH - gridPixelHeight) / 2;
+    const padding = UIConfig.LAYOUT.PADDING;
+    const scaleX = (canvasW - 2 * padding) / containerWidth;
+    const scaleY = (canvasH - 2 * padding * 2) / containerHeight;
+    const scale = Math.min(1, Math.min(scaleX, scaleY));
+
+    this.container.setScale(scale);
+    this.currentScale = scale;
+
+    const offsetX = (canvasW - containerWidth * scale) / 2 - bounds.left * scale;
+    const offsetY = (canvasH - containerHeight * scale) / 2 - bounds.top * scale;
+
+    this.offsetX = offsetX;
+    this.offsetY = offsetY;
 
     this.container.setPosition(offsetX, offsetY);
   }

@@ -13,15 +13,19 @@ export class UIRenderer {
   private gameOverPanel?: Phaser.GameObjects.Image;
   private overlay?: Phaser.GameObjects.Rectangle;
   private backButton?: Phaser.GameObjects.Text;
-  private uiContainer: Phaser.GameObjects.Container;
+  private uiFixedContainer: Phaser.GameObjects.Container;
+  private uiDynamicContainer: Phaser.GameObjects.Container;
   private buttonFactory: ButtonFactory;
+  private currentScale = 1;
+  private isActive = true;
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly state: GameState,
     private readonly logger: ILogger
   ) {
-    this.uiContainer = this.scene.add.container(0, 0).setScrollFactor(0);
+    this.uiFixedContainer = this.scene.add.container(0, 0).setScrollFactor(0);
+    this.uiDynamicContainer = this.scene.add.container(0, 0).setScrollFactor(0);
     this.buttonFactory = new ButtonFactory(scene);
     this.scene.scale.on("resize", this.handleResize, this);
   }
@@ -49,7 +53,7 @@ export class UIRenderer {
       }
     ).setOrigin(0, 0);
 
-    this.uiContainer.add(this.scoreText);
+    this.uiFixedContainer.add(this.scoreText);
   }
 
   /** Updates score display */
@@ -73,25 +77,16 @@ export class UIRenderer {
     onReturnToMenu: () => void
   ): void {
     const { width, height } = this.scene.scale;
-    const centerX = width / 2;
-    const centerY = height / 2;
 
     // Create overlay
     this.createOverlay(width, height);
 
-    // Create panel
-    this.createPanel(panelKey, centerX, centerY + UIConfig.LAYOUT.GAME_OVER_PANEL_OFFSET_Y);
+    // Create dynamic elements in scaled container
+    this.createPanel(panelKey, 0, UIConfig.LAYOUT.GAME_OVER_PANEL_OFFSET_Y);
+    const statsText = this.createStatsText(0, UIConfig.LAYOUT.STATS_OFFSET_Y, score, pipesFlowed);
+    const buttons = this.createGameOverButtons(0, UIConfig.LAYOUT.BUTTON_ROW_OFFSET_Y, onPlayAgain, onReturnToMenu);
 
-    // Create stats text
-    const statsText = this.createStatsText(centerX, centerY + UIConfig.LAYOUT.STATS_OFFSET_Y, score, pipesFlowed);
-
-    // Create buttons
-    const buttons = this.createGameOverButtons(centerX, centerY + UIConfig.LAYOUT.BUTTON_ROW_OFFSET_Y, onPlayAgain, onReturnToMenu);
-
-    // Add to UI container
-    this.uiContainer.add([this.gameOverPanel!, statsText, ...buttons]);
-
-    // Animate everything
+    this.uiDynamicContainer.add([this.gameOverPanel!, statsText, ...buttons]);
     this.animateGameOverPanel(statsText, buttons);
 
     this.logger.info(`GameOverPanel displayed: ${panelKey}`);
@@ -104,7 +99,7 @@ export class UIRenderer {
       .setScrollFactor(0)
       .setInteractive();
 
-    this.uiContainer.add(this.overlay);
+    this.uiFixedContainer.add(this.overlay);
   }
 
   private createPanel(panelKey: string, x: number, y: number): void {
@@ -158,7 +153,6 @@ export class UIRenderer {
     statsText: Phaser.GameObjects.Text,
     buttons: Phaser.GameObjects.Container[]
   ): void {
-    // Panel scale in
     this.scene.tweens.add({
       targets: this.gameOverPanel,
       scale: 1,
@@ -166,7 +160,6 @@ export class UIRenderer {
       ease: "Back.easeOut"
     });
 
-    // Fade in stats and buttons
     this.scene.tweens.add({
       targets: [statsText, ...buttons],
       alpha: 1,
@@ -176,7 +169,6 @@ export class UIRenderer {
     });
   }
 
-  /** Generic text creation helper with custom font support */
   private createText(
     x: number,
     y: number,
@@ -189,7 +181,6 @@ export class UIRenderer {
     }).setDepth(UIConfig.DEPTH.UI_BASE);
   }
 
-  /** Creates top-right back button */
   private createBackButton(): void {
     this.backButton = this.createText(
       0,
@@ -209,71 +200,63 @@ export class UIRenderer {
       this.scene.events.emit("ui:backToMenu");
     });
 
-    this.uiContainer.add(this.backButton);
+    this.uiFixedContainer.add(this.backButton);
   }
 
-  /** Handle resize */
   private handleResize(): void {
+    if (!this.isActive) return;
     this.repositionUI();
   }
 
-  /** Adjust UI positions based on screen size */
+  /** Adjust UI positions and scale based on screen size */
   private repositionUI(): void {
     const { width, height } = this.scene.scale;
     const centerX = width / 2;
     const centerY = height / 2;
 
-    // Position back button
+    // 🔹 Scale only dynamic container (game over panel, stats, etc.)
+    const scaleX = width / UIConfig.RESPONSIVE.DESIGN_WIDTH;
+    const scaleY = height / UIConfig.RESPONSIVE.DESIGN_HEIGHT;
+    const targetScale = Phaser.Math.Clamp(
+      Math.min(scaleX, scaleY),
+      UIConfig.RESPONSIVE.MIN_SCALE,
+      UIConfig.RESPONSIVE.MAX_SCALE
+    );
+
+    if (targetScale !== this.currentScale) {
+      this.currentScale = targetScale;
+      this.scene.tweens.add({
+        targets: this.uiDynamicContainer,
+        scale: targetScale,
+        duration: UIConfig.RESPONSIVE.SCALE_TWEEN_DURATION,
+        ease: "Power2"
+      });
+    }
+
+    this.uiDynamicContainer.setPosition(centerX, centerY);
+
+    if (this.scoreText) {
+      this.scoreText.setPosition(UIConfig.LAYOUT.PADDING, UIConfig.LAYOUT.PADDING);
+    }
+
     if (this.backButton) {
       this.backButton.setPosition(width - UIConfig.LAYOUT.PADDING, UIConfig.LAYOUT.PADDING);
     }
 
-    // Reposition game over elements if visible
-    if (this.overlay) {
+    if (this.overlay && this.isAlive(this.overlay)) {
       this.overlay.setSize(width, height);
     }
-
-    if (this.gameOverPanel) {
-      this.gameOverPanel.setPosition(centerX, centerY + UIConfig.LAYOUT.GAME_OVER_PANEL_OFFSET_Y);
-    }
-
-    // Find and reposition stats text
-    const statsText = this.findStatsText();
-    if (statsText) {
-      statsText.setPosition(centerX, centerY + UIConfig.LAYOUT.STATS_OFFSET_Y);
-    }
-
-    // Find and reposition buttons
-    const buttons = this.findGameOverButtons();
-    if (buttons.length === 2) {
-      const buttonSpacing = UIConfig.LAYOUT.BUTTON_SPACING;
-      const buttonY = centerY + UIConfig.LAYOUT.BUTTON_ROW_OFFSET_Y;
-      buttons[0].setPosition(centerX - buttonSpacing / 2, buttonY);
-      buttons[1].setPosition(centerX + buttonSpacing / 2, buttonY);
-    }
   }
 
-  private findStatsText(): Phaser.GameObjects.Text | undefined {
-    return this.uiContainer.getAll().find(
-      obj => obj instanceof Phaser.GameObjects.Text &&
-             obj.text?.startsWith("Final Score:")
-    ) as Phaser.GameObjects.Text | undefined;
+  private isAlive(obj?: Phaser.GameObjects.GameObject): boolean {
+    return !!(obj && obj.scene);
   }
 
-  private findGameOverButtons(): Phaser.GameObjects.Container[] {
-    return this.uiContainer.list.filter(
-      obj => obj instanceof Phaser.GameObjects.Container &&
-            obj.list.some(child =>
-              child instanceof Phaser.GameObjects.Text &&
-              ["Play Again", "Main Menu"].includes(child.text)
-            )
-    ) as Phaser.GameObjects.Container[];
-  }
-
-  /** Destroy UI and clean up */
   destroy(): void {
+    this.isActive = false;
     this.scene.scale.off("resize", this.handleResize, this);
-    this.uiContainer.destroy(true);
+    this.uiFixedContainer.destroy(true);
+    this.uiDynamicContainer.destroy(true);
     this.logger.debug("UIRenderer destroyed");
   }
 }

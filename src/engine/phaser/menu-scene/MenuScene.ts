@@ -139,19 +139,22 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private createCredits(): void {
-    this.add.text(
-      UIConfig.LAYOUT.PADDING,
-      UIConfig.LAYOUT.PADDING,
-      "Game made by Sergio Marchena, sprites by Pablo Cáceres",
-      {
-        fontSize: UIConfig.TEXT.CREDIT_SIZE,
-        color: UIConfig.TEXT.COLOR_LIGHT,
-        fontFamily: UIConfig.TEXT.FONT_FAMILY
-      }
-    )
+    const containerBounds = this.worldContainer.getContainerBounds();
+    const credits = this.add.text(
+        0,
+        containerBounds.bottom,
+        "Game made by Sergio Marchena, sprites by Pablo Cáceres",
+        {
+          fontSize: UIConfig.TEXT.CREDIT_SIZE,
+          color: UIConfig.TEXT.COLOR_LIGHT,
+          fontFamily: UIConfig.TEXT.FONT_FAMILY,
+          align: "center"
+        }
+      )
       .setOrigin(0, 0)
-      .setScrollFactor(0)
       .setDepth(UIConfig.DEPTH.UI_BASE);
+
+    this.worldContainer.add(credits);
   }
 
   private setDifficulty(difficulty: Difficulty): void {

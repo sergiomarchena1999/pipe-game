@@ -14,15 +14,16 @@ const createMockLogger = (): ILogger => ({
 
 /** Wait until the flow reaches a specific pipe or max iterations. */
 const waitForPipeFlow = (gameState: GameState, pipePos: any, maxIter = 500) => {
-  // Ensure flow network is initialized
   if (!gameState.flowNetwork.getActiveState()) {
-    gameState.flowNetwork.initialize();
+    gameState.flowNetwork.initialize(1);
   }
 
   const pipe = gameState.grid.getPipeAt(pipePos);
   let iterations = 0;
+  const deltaTime = 0.1; // seconds per iteration
+
   while (pipe && pipe.usedPorts.length === 0 && iterations < maxIter) {
-    gameState.update(0.016);
+    gameState.update(deltaTime);
     iterations++;
   }
   return pipe;
@@ -32,8 +33,9 @@ const waitForPipeFlow = (gameState: GameState, pipePos: any, maxIter = 500) => {
 const waitForFlowNetwork = (gameState: GameState, maxIter = 500) => {
   let iterations = 0;
   let visited = gameState.flowNetwork.getVisitedPortsSnapshot();
+  const deltaTime = 0.1;
   while (visited.length === 0 && iterations < maxIter) {
-    gameState.update(0.016);
+    gameState.update(deltaTime);
     visited = gameState.flowNetwork.getVisitedPortsSnapshot();
     iterations++;
   }
@@ -43,8 +45,9 @@ const waitForFlowNetwork = (gameState: GameState, maxIter = 500) => {
 /** Wait until a bomb on a cell completes or max iterations. */
 const waitForBombCompletion = (gameState: GameState, cell: any, maxIter = 200) => {
   let iterations = 0;
+  const deltaTime = 0.1;
   while (cell.hasBomb && iterations < maxIter) {
-    gameState.update(0.016);
+    gameState.update(deltaTime);
     iterations++;
   }
 };
@@ -96,7 +99,7 @@ describe('Integration: Full Game Flow', () => {
 
       const startPipe = gameState.grid.startPipe;
       const exitDir = startPipe.openPorts[0];
-      const nextPos = startPipe.position.move(exitDir, 6, 6);
+      const nextPos = startPipe.position.move(exitDir, 1, 6); // place adjacent
 
       if (nextPos) {
         gameState.placeNextPipe(nextPos);
@@ -130,7 +133,7 @@ describe('Integration: Full Game Flow', () => {
       let currentDir = startPipe.openPorts[0];
 
       for (let i = 0; i < 3; i++) {
-        const nextPos = currentPos.move(currentDir, 6, 6);
+        const nextPos = currentPos.move(currentDir, 1, 6); // distance=1 to ensure connection
         if (!nextPos) break;
 
         const result = gameState.placeNextPipe(nextPos);
@@ -153,7 +156,7 @@ describe('Integration: Full Game Flow', () => {
       const initialScore = gameState.scoreController.score;
       const startPipe = gameState.grid.startPipe;
       const exitDir = startPipe.openPorts[0];
-      const nextPos = startPipe.position.move(exitDir, 6, 6);
+      const nextPos = startPipe.position.move(exitDir, 1, 6);
 
       if (nextPos) {
         gameState.placeNextPipe(nextPos);
