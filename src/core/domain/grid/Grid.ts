@@ -54,9 +54,12 @@ export class Grid {
       }
 
       this._startPipe = startPipeResult.value;
-      const protectedPos = this._startPipe.position.move(this._startPipe.direction, this.width, this.height);
+      const protectedPositions = [
+        this._startPipe.position,
+        ...this.getAllNeighbors(this._startPipe.position, true).map(c => c.position)
+      ];
 
-      this.blockRandomCells(this.config.blockedPercentage, protectedPos ? [protectedPos] : []);
+      this.blockRandomCells(this.config.blockedPercentage, protectedPositions);
       this._initialized = true;
       
       this.logger.info("Grid initialized successfully");
@@ -368,6 +371,35 @@ export class Grid {
     }
 
     this.logger.info(`Blocked ${cellsToBlock} cells (${percentage}%) for difficulty`);
+  }
+
+  /** Returns all neighboring cells (4-way or 8-way). */
+  private getAllNeighbors(pos: GridPosition, includeDiagonals: boolean = true): GridCell[] {
+    const offsets = includeDiagonals
+      ? [
+          [-1, -1], [0, -1], [1, -1],
+          [-1,  0],          [1,  0],
+          [-1,  1], [0,  1], [1,  1]
+        ]
+      : [
+          [0, -1],   // up
+          [-1, 0],   // left
+          [1, 0],    // right
+          [0, 1]     // down
+        ];
+
+    const neighbors: GridCell[] = [];
+
+    for (const [dx, dy] of offsets) {
+      const nx = pos.x + dx;
+      const ny = pos.y + dy;
+
+      if (this.isValidPosition(nx, ny)) {
+        neighbors.push(this.cells[ny][nx]);
+      }
+    }
+
+    return neighbors;
   }
 
   // ============================================================================
