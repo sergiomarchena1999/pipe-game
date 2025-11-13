@@ -48,13 +48,15 @@ export class Grid {
     }
 
     try {
-      this.blockRandomCells(this.config.blockedPercentage);
       const startPipeResult = this.createStartPipe();
       if (!startPipeResult.success) {
         return R.fail('initialization_failed');
       }
 
       this._startPipe = startPipeResult.value;
+      const protectedPos = this._startPipe.position.move(this._startPipe.direction, this.width, this.height);
+
+      this.blockRandomCells(this.config.blockedPercentage, protectedPos ? [protectedPos] : []);
       this._initialized = true;
       
       this.logger.info("Grid initialized successfully");
@@ -135,7 +137,7 @@ export class Grid {
    * Places a pipe in the specified cell.
    * @returns Result indicating success or failure with reason
    */
-  setPipe(cell: GridCell, pipe: Pipe): Result<void, 'cell_blocked' | 'position_mismatch'> {
+  setPipe(cell: GridCell, pipe: Pipe): Result<void, 'cell_blocked' | 'position_mismatch' | "cell_occupied"> {
     if (cell.isBlocked) {
       return R.fail('cell_blocked');
     }
@@ -143,11 +145,13 @@ export class Grid {
       return R.fail('position_mismatch');
     }
 
+    if (cell.hasPipe) {
+      return R.fail('cell_occupied');
+    }
+
     try {
       cell.setPipe(pipe);
-      this.logger.debug(
-        `Placed ${pipe.shape.id} at ${cell.position} facing ${pipe.direction}`
-      );
+      this.logger.debug(`Placed ${pipe.shape.id} at ${cell.position} facing ${pipe.direction}`);
       return R.ok(undefined);
     } catch (error) {
       this.logger.error("Failed to set pipe", error);
@@ -348,12 +352,14 @@ export class Grid {
   }
 
   /** Blocks random cells based on difficulty percentage. */
-  private blockRandomCells(percentage: number): void {
+  private blockRandomCells(percentage: number, protectedPositions: GridPosition[] = []): void {
     if (percentage <= 0) return;
 
     const totalCells = this.width * this.height;
     const cellsToBlock = Math.floor((percentage / 100) * totalCells);
-    const available = this.getEmptyCells();
+    const available = this.getEmptyCells().filter(cell => 
+      !protectedPositions.some(pos => pos.equals(cell.position))
+    );
 
     for (let i = 0; i < cellsToBlock && available.length > 0; i++) {
       const index = Math.floor(Math.random() * available.length);

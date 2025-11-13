@@ -1,8 +1,12 @@
-import type { WorldContainer } from "../../WorldContainer";
+import { AnimationPresets, UIConfig } from "../../../../config/UIConfig";
 import type { ILogger } from "../../../../core/logging/ILogger";
+import type { WorldContainer } from "../../WorldContainer";
 
 
-/** Handles the animated grid cursor */
+// ============================================================================
+// CursorRenderer - Handles the animated grid cursor
+// ============================================================================
+
 export class CursorRenderer {
   private gridCursor: Phaser.GameObjects.Sprite;
 
@@ -12,32 +16,23 @@ export class CursorRenderer {
     private readonly logger: ILogger
   ) {
     this.createAnimation();
-    
+
     this.gridCursor = this.scene.add
       .sprite(0, 0, "grid-cursor")
       .setOrigin(0)
-      .setDepth(10)
+      .setDepth(UIConfig.DEPTH.CURSOR)
       .setVisible(false);
-    
+
     this.world.add(this.gridCursor);
-    this.gridCursor.play("grid-cursor-anim");
+    this.gridCursor.play(AnimationPresets.GRID_CURSOR.key);
   }
 
   private createAnimation(): void {
-    if (this.scene.anims.exists("grid-cursor-anim")) {
+    if (this.scene.anims.exists(AnimationPresets.GRID_CURSOR.key)) {
       return;
     }
 
-    this.scene.anims.create({
-      key: "grid-cursor-anim",
-      frames: [
-        { key: "grid-cursor" },
-        { key: "grid-cursor-alt" }
-      ],
-      frameRate: 2,
-      repeat: -1
-    });
-
+    this.scene.anims.create(AnimationPresets.GRID_CURSOR);
     this.logger.debug("Created grid cursor animation");
   }
 
@@ -54,5 +49,10 @@ export class CursorRenderer {
 
   hide(): void {
     this.gridCursor.setVisible(false);
+  }
+
+  destroy(): void {
+    this.gridCursor.destroy();
+    this.logger.debug("CursorRenderer destroyed");
   }
 }

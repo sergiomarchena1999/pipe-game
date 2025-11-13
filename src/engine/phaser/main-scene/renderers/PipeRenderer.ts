@@ -1,9 +1,14 @@
+import Phaser from "phaser";
+import { UIConfig } from "../../../../config/UIConfig";
 import type { WorldContainer } from "../../WorldContainer";
 import type { GridPosition } from "../../../../core/domain/grid/GridPosition";
 import type { Pipe } from "../../../../core/domain/pipe/Pipe";
 
 
-/** Handles rendering individual pipes on the grid */
+// ============================================================================
+// PipeRenderer - Handles rendering individual pipes on the grid
+// ============================================================================
+
 export class PipeRenderer {
   private readonly pipeSprites = new Map<GridPosition, Phaser.GameObjects.Image>();
   private readonly bombSprites = new Map<GridPosition, Phaser.GameObjects.Image>();
@@ -20,7 +25,7 @@ export class PipeRenderer {
       .image(pos.x, pos.y, pipe.assetKey)
       .setOrigin(0.5)
       .setRotation(Phaser.Math.DegToRad(pipe.direction.angle))
-      .setDepth(5);
+      .setDepth(UIConfig.DEPTH.PIPE);
 
     this.world.add(sprite);
     this.pipeSprites.set(pipe.position, sprite);
@@ -28,37 +33,37 @@ export class PipeRenderer {
 
   /**
    * Starts bomb animation for a pipe at the given cell
-   * @param cell - Grid cell where the bomb animation should play
+   * @param posObj - Grid position where the bomb animation should play
    * @param durationMs - Total duration of the animation in milliseconds
    * @param onComplete - Callback when animation completes
    */
   startBombAnimation(posObj: GridPosition, durationMs: number, onComplete?: () => void): void {
-    // Stop any existing animation at this cell
+    // Stop any existing animation at this position
     this.stopBombAnimation(posObj);
+
     const pos = this.world.gridToLocal(posObj);
-    
+
     // Create bomb sprite
     const bombSprite = this.scene.add
       .image(pos.x, pos.y, "bomb-idle")
       .setOrigin(0.5)
-      .setDepth(10) // Above pipes
+      .setDepth(UIConfig.DEPTH.BOMB)
       .setAlpha(1);
 
-    // Phase 1: Show bomb-idle for half the duration (already set)
     this.world.add(bombSprite);
     this.bombSprites.set(posObj, bombSprite);
 
     // Calculate timings
     const halfDuration = durationMs / 2;
-    const explosionFrameTime = halfDuration / 4; // 4 frames for 2 images alternating twice
+    const explosionFrameTime = halfDuration / 4; // 4 frames alternating
 
     const timers: Phaser.Time.TimerEvent[] = [];
 
     // Phase 2: Start explosion sequence after half duration
     const explosionStartTimer = this.scene.time.delayedCall(halfDuration, () => {
-      // Alternate between explosion frames
       let frameIndex = 0;
       const frames = ["bomb-explosion-1", "bomb-explosion-2", "bomb-explosion-1", "bomb-explosion-2"];
+
       const frameTimer = this.scene.time.addEvent({
         delay: explosionFrameTime,
         repeat: frames.length - 1,
@@ -82,7 +87,6 @@ export class PipeRenderer {
     });
 
     timers.push(cleanupTimer);
-
     this.bombTimers.set(posObj, timers);
   }
 
@@ -96,7 +100,7 @@ export class PipeRenderer {
     this.cleanupBombAnimation(posObj);
   }
 
-  /** Cleans up bomb sprite at a posObj */
+  /** Cleans up bomb sprite at a position */
   private cleanupBombAnimation(posObj: GridPosition): void {
     const bombSprite = this.bombSprites.get(posObj);
     if (bombSprite) {
@@ -104,7 +108,6 @@ export class PipeRenderer {
       this.bombSprites.delete(posObj);
     }
 
-    // Clean up timers
     const timers = this.bombTimers.get(posObj);
     if (timers) {
       timers.forEach(timer => timer.remove());
@@ -112,7 +115,7 @@ export class PipeRenderer {
     }
   }
 
-  /** Get sprite for a specific grid position (useful for animations/removal) */
+  /** Get sprite for a specific grid position */
   getSprite(posObj: GridPosition): Phaser.GameObjects.Image | undefined {
     return this.pipeSprites.get(posObj);
   }
@@ -146,5 +149,10 @@ export class PipeRenderer {
     // Destroy all pipe sprites
     this.pipeSprites.forEach(sprite => sprite.destroy());
     this.pipeSprites.clear();
+  }
+
+  /** Complete cleanup with resource destruction */
+  destroy(): void {
+    this.clear();
   }
 }

@@ -1,20 +1,31 @@
 import Phaser from "phaser";
 import { Difficulty, DifficultyConfig } from "../../../config/DifficultyConfig";
+import { UIConfig } from "../../../config/UIConfig";
 import { PhaserAssetLoader } from "../PhaserAssetLoader";
-import { createPanelButton } from "../utils";
 import { WorldContainer } from "../WorldContainer";
 import { Logger } from "../../../core/logging/Logger";
 import { loadTTF } from "../../../core/utils";
+import { AnimationManager } from "../utils/AnimationManager";
+import { SceneTransitionManager } from "../utils/SceneTransitionManager";
+import { ButtonFactory } from "../utils/ButtonFactory";
 
 import type { IGameConfig } from "../../../config/GameConfig";
 
-
+/**
+ * Menu scene for difficulty selection and game start.
+ * Follows proper Phaser lifecycle: init -> preload -> create
+ */
 export class MenuScene extends Phaser.Scene {
   private assetLoader!: PhaserAssetLoader;
   private worldContainer!: WorldContainer;
   private logger!: Logger;
+  private animationManager!: AnimationManager;
+  private transitionManager!: SceneTransitionManager;
+  private buttonFactory!: ButtonFactory;
+
   private selectedDifficulty: Difficulty = Difficulty.Medium;
-  private loadFontPromise!: Promise<void>;
+  private difficultyButtons: Map<Difficulty, Phaser.GameObjects.Container> = new Map();
+  private fontLoaded = false;
 
   constructor() {
     super({ key: "MenuScene" });
@@ -23,20 +34,47 @@ export class MenuScene extends Phaser.Scene {
   init(): void {
     const logLevel = import.meta.env.VITE_LOG_LEVEL ?? "info";
     this.logger = new Logger(logLevel);
+    this.animationManager = new AnimationManager(this, this.logger);
+    this.transitionManager = new SceneTransitionManager(this);
+    this.buttonFactory = new ButtonFactory(this);
+
+    this.logger.info("MenuScene initialized");
   }
 
   preload(): void {
     this.assetLoader = new PhaserAssetLoader(this, this.logger);
     this.assetLoader.loadAll();
-    this.assetLoader.startLoading();
 
-    this.loadFontPromise = loadTTF('Jersey10', 'src/assets/fonts/Jersey10-Regular.ttf');
+    // Load font asynchronously
+    loadTTF('Jersey10', 'src/assets/fonts/Jersey10-Regular.ttf')
+      .then(() => {
+        this.fontLoaded = true;
+        this.logger.debug("Font loaded successfully");
+      })
+      .catch(err => {
+        this.logger.error("Failed to load font", err);
+        this.fontLoaded = true; // Continue anyway
+      });
+
+    // Wait for both assets and font to complete
+    this.load.once('complete', () => this.onLoadComplete());
   }
 
-  async create(): Promise<void> {
-    // Wait for font to finish loading
-    await this.loadFontPromise;
+  private onLoadComplete(): void {
+    // Wait a frame for font to be ready
+    this.time.delayedCall(100, () => {
+      if (this.fontLoaded) {
+        this.createMenuUI();
+      }
+    });
+  }
 
+  create(): void {
+    // Empty - actual creation happens in onLoadComplete
+    // This ensures proper sequencing
+  }
+
+  private createMenuUI(): void {
     const tempConfig = this.getConfig();
     if (!tempConfig) return;
 
@@ -45,101 +83,129 @@ export class MenuScene extends Phaser.Scene {
     const centerX = gridW / 2;
     const centerY = gridH / 2;
 
-    const titlePanel = this.add.sprite(centerX, centerY - 130, "menu-title-1")
-      .setOrigin(0.5)
-      .setDepth(2);
-    this.worldContainer.add(titlePanel);
+    // Create animations
+    this.animationManager.createMenuAnimations();
 
-    // Create the animation if it doesn't exist
-    if (!this.anims.exists("menu-anim")) {
-      this.anims.create({
-        key: "menu-anim",
-        frames: [
-          { key: "menu-title-1" },
-          { key: "menu-title-2" }
-        ],
-        frameRate: 3,
-        repeat: -1
-      });
-    }
+    // Create and animate title
+    this.createTitle(centerX, centerY + UIConfig.LAYOUT.TITLE_OFFSET_Y);
 
-    // Play the animation
-    titlePanel.play("menu-anim");
+    // Create start button
+    this.createStartButton(centerX, centerY + UIConfig.LAYOUT.START_BUTTON_OFFSET_Y);
 
-    this.worldContainer.add(titlePanel);
+    // Create difficulty selection
+    this.createDifficultyButtons(centerX, centerY + UIConfig.LAYOUT.DIFFICULTY_OFFSET_Y);
 
-    const startButton = createPanelButton(centerX, centerY + 50, "Start Game", () => this.startGame(), this);
-    this.worldContainer.add(startButton);
+    // Create credits
+    this.createCredits();
 
-    // Difficulty buttons
-    this.createDifficultyButtons(centerX, centerY + 130);
-
-    // Fade in effect
-    this.cameras.main.fadeIn(500, 0, 0, 0);
+    // Fade in
+    this.transitionManager.fadeIn();
   }
 
-  shutdown(): void {
-    this.worldContainer?.destroy();
+  private createTitle(x: number, y: number): void {
+    const titlePanel = this.add.sprite(x, y, "menu-title-1")
+      .setOrigin(0.5)
+      .setDepth(UIConfig.DEPTH.UI_BASE);
+
+    titlePanel.play("menu-anim");
+    this.worldContainer.add(titlePanel);
+  }
+
+  private createStartButton(x: number, y: number): void {
+    const startButton = this.buttonFactory.createStartButton(x, y, () => this.startGame());
+    this.worldContainer.add(startButton);
   }
 
   private createDifficultyButtons(centerX: number, buttonY: number): void {
     const difficulties: Difficulty[] = [Difficulty.Easy, Difficulty.Medium, Difficulty.Hard];
-    const spacing = 300;
-    const buttons: Record<string, Phaser.GameObjects.Container> = {};
+    const buttonSpacing = UIConfig.LAYOUT.DIFFICULTY_SPACING;
 
-    difficulties.forEach((difficulty, i) => {
-      const offsetX = (i - 1) * (spacing / 2);
-      const button = createPanelButton(
+    difficulties.forEach((difficulty, index) => {
+      const offsetX = (index - 1) * (buttonSpacing / 2);
+      const button = this.buttonFactory.createPanelButton(
         centerX + offsetX,
         buttonY,
         difficulty.toUpperCase(),
-        () => this.setDifficulty(difficulty, buttons),
-        this
+        () => this.setDifficulty(difficulty)
       );
 
-      buttons[difficulty] = button;
+      this.difficultyButtons.set(difficulty, button);
       this.worldContainer.add(button);
     });
 
-    this.setDifficulty(this.selectedDifficulty, buttons);
+    // Set initial selection
+    this.setDifficulty(this.selectedDifficulty);
   }
 
-  private setDifficulty(difficulty: Difficulty, buttons: Record<string, Phaser.GameObjects.Container>): void {
+  private createCredits(): void {
+    this.add.text(
+      UIConfig.LAYOUT.PADDING,
+      UIConfig.LAYOUT.PADDING,
+      "Game made by Sergio Marchena, sprites by Pablo Cáceres",
+      {
+        fontSize: UIConfig.TEXT.CREDIT_SIZE,
+        color: UIConfig.TEXT.COLOR_LIGHT,
+        fontFamily: UIConfig.TEXT.FONT_FAMILY
+      }
+    )
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(UIConfig.DEPTH.UI_BASE);
+  }
+
+  private setDifficulty(difficulty: Difficulty): void {
     this.selectedDifficulty = difficulty;
 
-    Object.entries(buttons).forEach(([key, container]) => {
-      const sprite = container.list.find(child => child instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image;
-      if (key === difficulty) {
-        sprite.setTexture("button-blue"); // selected button sprite
-      } else {
-        sprite.setTexture("button-orange"); // default button sprite
-      }
+    // Update button visuals
+    this.difficultyButtons.forEach((button, key) => {
+      const spriteKey = key === difficulty
+        ? UIConfig.BUTTON.SELECTED_SPRITE
+        : UIConfig.BUTTON.DEFAULT_SPRITE;
+
+      this.buttonFactory.updateButtonSprite(button, spriteKey);
     });
 
     this.logger.info(`Selected difficulty: ${difficulty.toUpperCase()}`);
   }
 
-  private startGame(): void {
+  private async startGame(): Promise<void> {
     const config = this.getConfig();
     if (!config) return;
 
-    this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start("MainScene", { config, logger: this.logger });
+    await this.transitionManager.transitionTo("MainScene", {
+      config,
+      logger: this.logger
     });
   }
 
   private getConfig(): IGameConfig | null {
     const result = DifficultyConfig.getConfig(this.selectedDifficulty);
     if (!result.success) {
-      this.logger.error(`Failed to start game: ${result.error}`);
-      this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 200,
-        `Error loading config: ${result.error}`, 
-        { fontFamily: 'Jersey10', fontSize: "20px", color: "#ff0000" })
-        .setOrigin(0.5)
-        .setDepth(5);
+      this.logger.error(`Failed to get config: ${result.error}`);
+      this.showError(`Error loading config: ${result.error}`);
       return null;
     }
     return result.value;
+  }
+
+  private showError(message: string): void {
+    this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY + 200,
+      message,
+      {
+        fontFamily: UIConfig.TEXT.FONT_FAMILY,
+        fontSize: "20px",
+        color: UIConfig.TEXT.COLOR_ERROR
+      }
+    )
+      .setOrigin(0.5)
+      .setDepth(UIConfig.DEPTH.UI_BASE);
+  }
+
+  shutdown(): void {
+    this.difficultyButtons.clear();
+    this.worldContainer?.destroy();
+    this.logger.debug("MenuScene shutdown complete");
   }
 }

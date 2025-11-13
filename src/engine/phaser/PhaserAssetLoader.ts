@@ -7,6 +7,8 @@ import winnerPanel from "../../assets/ui/winner-panel.png";
 import loserPanel from "../../assets/ui/loser-panel.png";
 import buttonBlue from "../../assets/ui/button-blue.png";
 import buttonOrange from "../../assets/ui/button-orange.png";
+import buttonStart from "../../assets/ui/button-start.png";
+import buttonStartHover from "../../assets/ui/button-start-hover.png";
 
 import menuTitle1 from "../../assets/menu/menu-title-1.png";
 import menuTitle2 from "../../assets/menu/menu-title-2.png";
@@ -49,6 +51,8 @@ export class PhaserAssetLoader {
     "loser-panel": loserPanel,
     "button-blue": buttonBlue,
     "button-orange": buttonOrange,
+    "button-start": buttonStart,
+    "button-start-hover": buttonStartHover,
     "menu-title-1": menuTitle1,
     "menu-title-2": menuTitle2,
     "bomb-idle": bombIdle,
