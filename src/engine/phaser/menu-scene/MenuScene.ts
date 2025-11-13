@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import fontUrl from '../../../assets/fonts/Jersey10-Regular.ttf';
 import { Difficulty, DifficultyConfig } from "../../../config/DifficultyConfig";
 import { UIConfig } from "../../../config/UIConfig";
 import { PhaserAssetLoader } from "../PhaserAssetLoader";
@@ -46,7 +47,7 @@ export class MenuScene extends Phaser.Scene {
     this.assetLoader.loadAll();
 
     // Load font asynchronously
-    loadTTF('Jersey10', 'src/assets/fonts/Jersey10-Regular.ttf')
+    loadTTF('Jersey10', fontUrl)
       .then(() => {
         this.fontLoaded = true;
         this.logger.debug("Font loaded successfully");
