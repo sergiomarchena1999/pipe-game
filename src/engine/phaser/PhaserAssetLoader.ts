@@ -5,9 +5,11 @@ import tileBackground from "../../assets/tile-background.png";
 
 import winnerPanel from "../../assets/ui/winner-panel.png";
 import loserPanel from "../../assets/ui/loser-panel.png";
+import buttonBlue from "../../assets/ui/button-blue.png";
+import buttonOrange from "../../assets/ui/button-orange.png";
 
-import titlePipe from "../../assets/menu/title-pipe.png";
-import titleMania from "../../assets/menu/title-mania.png";
+import menuTitle1 from "../../assets/menu/menu-title-1.png";
+import menuTitle2 from "../../assets/menu/menu-title-2.png";
 
 import bombIdle from "../../assets/bomb/bomb-idle.png";
 import bombExplosion1 from "../../assets/bomb/bomb-explosion-1.png";
@@ -21,9 +23,9 @@ import gridBorderCorner from "../../assets/grid/grid-border-corner.png";
 import gridCursor from "../../assets/grid/grid-cursor.png";
 import gridCursorAlt from "../../assets/grid/grid-cursor-alt.png";
 
-import queueTile from "../../assets/queue/queue-tile.png";
-import queueTileBorder from "../../assets/queue/queue-tile-border.png";
 import queueSelected from "../../assets/queue/queue-selected.png";
+import queueCorner from "../../assets/queue/queue-corner.png";
+import queueSide from "../../assets/queue/queue-side.png";
 
 import pipeStraight from "../../assets/pipes/pipe-straight.png";
 import pipeCorner from "../../assets/pipes/pipe-corner.png";
@@ -45,8 +47,10 @@ export class PhaserAssetLoader {
     "tile-background": tileBackground,
     "winner-panel": winnerPanel,
     "loser-panel": loserPanel,
-    "title-pipe": titlePipe,
-    "title-mania": titleMania,
+    "button-blue": buttonBlue,
+    "button-orange": buttonOrange,
+    "menu-title-1": menuTitle1,
+    "menu-title-2": menuTitle2,
     "bomb-idle": bombIdle,
     "bomb-explosion-1": bombExplosion1,
     "bomb-explosion-2": bombExplosion2,
@@ -56,9 +60,9 @@ export class PhaserAssetLoader {
     "grid-border-corner": gridBorderCorner,
     "grid-cursor": gridCursor,
     "grid-cursor-alt": gridCursorAlt,
-    "queue-tile": queueTile,
-    "queue-tile-border": queueTileBorder,
     "queue-selected": queueSelected,
+    "queue-corner": queueCorner,
+    "queue-side": queueSide,
     "pipe-straight": pipeStraight,
     "pipe-corner": pipeCorner,
     "pipe-cross": pipeCross,

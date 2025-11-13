@@ -126,17 +126,17 @@ export class DifficultyConfig {
   // ========================================================================
 
   private static readonly EASY_SCORE: IScoreConfig = {
-    winFilledPipesCount: randomIntFromInterval(6, 10),
+    winFilledPipesCount: randomIntFromInterval(8, 12),
     pointsPerPipe: 100,
   };
 
   private static readonly MEDIUM_SCORE: IScoreConfig = {
-    winFilledPipesCount: randomIntFromInterval(10, 14),
+    winFilledPipesCount: randomIntFromInterval(12, 18),
     pointsPerPipe: 200,
   };
 
   private static readonly HARD_SCORE: IScoreConfig = {
-    winFilledPipesCount: randomIntFromInterval(16, 20),
+    winFilledPipesCount: randomIntFromInterval(18, 24),
     pointsPerPipe: 250,
   };
 
@@ -146,7 +146,7 @@ export class DifficultyConfig {
 
   private static readonly EASY_CONFIG: IGameConfig = {
     difficulty: Difficulty.Easy,
-    queue: { maxSize: 5, pipeWeights: DifficultyConfig.EASY_WEIGHTS},
+    queue: { maxSize: 6, pipeWeights: DifficultyConfig.EASY_WEIGHTS},
     grid: DifficultyConfig.EASY_GRID,
     bomb: DifficultyConfig.EASY_BOMBS,
     flow: DifficultyConfig.EASY_FLOW,
@@ -164,7 +164,7 @@ export class DifficultyConfig {
 
   private static readonly HARD_CONFIG: IGameConfig = {
     difficulty: Difficulty.Hard,
-    queue: { maxSize: 5, pipeWeights: DifficultyConfig.HARD_WEIGHTS},
+    queue: { maxSize: 4, pipeWeights: DifficultyConfig.HARD_WEIGHTS},
     grid: DifficultyConfig.HARD_GRID,
     bomb: DifficultyConfig.HARD_BOMBS,
     flow: DifficultyConfig.HARD_FLOW,

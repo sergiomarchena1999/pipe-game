@@ -127,7 +127,7 @@ export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
         continue;
       }
 
-      // *** Flow completed this pipe! Emit event ***
+      // Flow completed this pipe - emit event
       if (prevProgress < 100 && state.progress >= 100) {
         this.emit("onPipeFlowed", state.pipe);
         
@@ -146,6 +146,13 @@ export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
       // No pipe at exit - emit event
       if (!nextPipe) {
         this.logger.debug(`No pipe available at ${state.pipe.position} exit ${state.exitDir.name}`);
+        this.emit("onNoPathAvailable", state.pipe, state.exitDir);
+        continue;
+      }
+
+      // Pipe is being bombed - emit event
+      if (nextPipe.isBombing) {
+        this.logger.debug(`Pipe at ${state.pipe.position} is being bombed`);
         this.emit("onNoPathAvailable", state.pipe, state.exitDir);
         continue;
       }
@@ -316,9 +323,7 @@ export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
     }
 
     if (keysToDelete.length > 0) {
-      this.logger.debug(
-        `Invalidated ${keysToDelete.length} cache entries for ${affectedPipe.position}`
-      );
+      this.logger.debug(`Invalidated ${keysToDelete.length} cache entries for ${affectedPipe.position}`);
     }
   }
 }

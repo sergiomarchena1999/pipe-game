@@ -3,6 +3,7 @@ import { ScoreController } from "../../src/core/ScoreController";
 import { IScoreConfig } from "../../src/config/GameConfig";
 import { ILogger } from "../../src/core/logging/ILogger";
 import { Pipe } from "../../src/core/domain/pipe/Pipe";
+import { PipeType } from "../../src/core/constants/PipeShapes";
 
 
 describe("ScoreController", () => {
@@ -24,7 +25,7 @@ describe("ScoreController", () => {
     };
 
     controller = new ScoreController(config, logger);
-    mockPipe = {} as Pipe;
+    mockPipe = { shape: { id: PipeType.Straight } } as Pipe;
   });
 
   describe("Initialization", () => {
@@ -62,7 +63,11 @@ describe("ScoreController", () => {
       const onWin = vi.fn();
       controller.on("onWin", onWin);
 
-      const pipes = [{}, {}, {}] as Pipe[];
+      const pipes = [
+        { shape: { id: PipeType.Straight } },
+        { shape: { id: PipeType.Corner } },
+        { shape: { id: PipeType.Cross } },
+      ] as Pipe[];
       pipes.forEach((p) => controller.onPipeFlowed(p));
 
       expect(controller.gameEnded).toBe(true);
@@ -78,7 +83,7 @@ describe("ScoreController", () => {
       const onLose = vi.fn();
       controller.on("onLose", onLose);
 
-      controller.onPipeFlowed({} as Pipe); // 1 of 3
+      controller.onPipeFlowed(mockPipe); // 1 of 3
       controller.onFlowStuck();
 
       expect(controller.gameEnded).toBe(true);
@@ -90,7 +95,7 @@ describe("ScoreController", () => {
       const onLose = vi.fn();
       controller.on("onLose", onLose);
 
-      controller.onPipeFlowed({} as Pipe); // 1 of 3
+      controller.onPipeFlowed(mockPipe); // 1 of 3
       controller.onNoPathAvailable();
 
       expect(controller.gameEnded).toBe(true);
@@ -99,9 +104,9 @@ describe("ScoreController", () => {
     });
 
     it("should not trigger lose if already won", () => {
-      controller.onPipeFlowed({} as Pipe);
-      controller.onPipeFlowed({} as Pipe);
-      controller.onPipeFlowed({} as Pipe); // triggers win
+      controller.onPipeFlowed(mockPipe);
+      controller.onPipeFlowed({ shape: { id: PipeType.Corner } } as Pipe);
+      controller.onPipeFlowed({ shape: { id: PipeType.Cross } } as Pipe); // triggers win
 
       const onLose = vi.fn();
       controller.on("onLose", onLose);
@@ -115,7 +120,7 @@ describe("ScoreController", () => {
 
   describe("Reset", () => {
     it("should reset all state correctly", () => {
-      controller.onPipeFlowed({} as Pipe);
+      controller.onPipeFlowed(mockPipe);
       controller.onFlowStuck(); // lose
 
       controller.reset();
@@ -130,14 +135,15 @@ describe("ScoreController", () => {
 
   describe("Progress", () => {
     it("should compute progress percentage correctly", () => {
-      controller.onPipeFlowed({} as Pipe);
-      expect(controller.progressPercent).toBeCloseTo(33.33, 1);
+    const pipe = { shape: { id: PipeType.Straight } } as Pipe;
+    controller.onPipeFlowed(pipe);
+    expect(controller.progressPercent).toBeCloseTo(33.33, 1);
 
-      controller.onPipeFlowed({} as Pipe);
-      expect(controller.progressPercent).toBeCloseTo(66.66, 1);
+    controller.onPipeFlowed({ shape: { id: PipeType.Corner } } as Pipe);
+    expect(controller.progressPercent).toBeCloseTo(66.66, 1);
 
-      controller.onPipeFlowed({} as Pipe);
-      expect(controller.progressPercent).toBe(100);
-    });
+    controller.onPipeFlowed({ shape: { id: PipeType.Cross } } as Pipe);
+    expect(controller.progressPercent).toBe(100);
+  });
   });
 });

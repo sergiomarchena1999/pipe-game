@@ -7,7 +7,6 @@ import type { ILogger } from "../../../../core/logging/ILogger";
 /** Handles rendering the pipe queue with sprite pooling for performance */
 export class QueueRenderer {
   private readonly spritePool: Phaser.GameObjects.Image[] = [];
-  private backgroundSprites: Phaser.GameObjects.Image[] = [];
   private activeSprites: Phaser.GameObjects.Image[] = [];
 
   constructor(
@@ -16,26 +15,63 @@ export class QueueRenderer {
     private readonly world: WorldContainer,
     private readonly logger: ILogger
   ) {
-    const queuePos = this.world.getQueuePosition();
-    const queueCenterX = queuePos.x;
-    const cellSize = config.grid.cellSize;
-    const totalHeight = config.queue.maxSize * cellSize - cellSize;
+    this.renderQueueBorder();
+  }
 
-    for (let i = 0; i < config.queue.maxSize; i++) {
-      const bgY = queuePos.y - totalHeight + (i * cellSize);
-      const sprite = i == config.queue.maxSize - 1 
-        ? "queue-selected"
-        : i == 0
-          ? "queue-tile-border"
-          : "queue-tile";
-      const background = this.scene.add
-        .image(queueCenterX, bgY, sprite)
-        .setOrigin(0.5, 0)
+  private renderQueueBorder(): void {
+    const { cellSize } = this.config.grid;
+    const maxSize = this.config.queue.maxSize;
+    const halfSize = cellSize / 2;
+
+    // Queue dimensions: 1 cell wide, maxSize cells tall
+    const queueWidth = 1;
+    const queueHeight = maxSize;
+
+    /** Helper to draw a border sprite at raw x,y coordinates */
+    const drawBorder = (x: number, y: number, angle: number) => {
+      const local = this.world.queueToLocalCorner({x, y});
+      const sprite = this.scene.add
+        .image(local.x + halfSize, local.y + halfSize, "queue-side")
+        .setOrigin(0.5)
+        .setAngle(angle)
+        .setDepth(98);
+      this.world.add(sprite);
+    };
+
+    /** Helper to draw a corner sprite at raw x,y coordinates */
+    const drawCorner = (x: number, y: number, angle: number) => {
+      const local = this.world.queueToLocalCorner({x, y});
+      const sprite = this.scene.add
+        .image(local.x + halfSize, local.y + halfSize, "queue-corner")
+        .setOrigin(0.5)
+        .setAngle(angle)
         .setDepth(99);
-      
-      this.world.add(background);
-      this.backgroundSprites.push(background);
+      this.world.add(sprite);
+    };
+
+    drawBorder(0, -1, 0);              // Top
+    drawBorder(0, queueHeight, 180);   // Bottom
+
+    // Left and right borders
+    for (let y = 0; y < queueHeight; y++) {
+      drawBorder(-1, y, -90);            // Left
+      drawBorder(queueWidth, y, 90);     // Right
     }
+
+    // Corners
+    drawCorner(-1, -1, 0);                    // Top-left
+    drawCorner(queueWidth, -1, 90);           // Top-right
+    drawCorner(-1, queueHeight, -90);         // Bottom-left
+    drawCorner(queueWidth, queueHeight, 180); // Bottom-right
+
+    const local = this.world.queueToLocalCorner({x: 0, y: 0});
+    const sprite = this.scene.add
+      .image(local.x, local.y, "queue-selected")
+      .setOrigin(0)
+      .setDepth(97);
+    this.world.add(sprite);
+
+    this.logger.debug(`Queue border rendered: ${queueWidth}x${queueHeight} cells`);
   }
 
   render(queue: PipeQueue): void {
@@ -49,29 +85,21 @@ export class QueueRenderer {
     const cellSize = this.config.grid.cellSize;
     const halfSize = cellSize / 2;
 
-    // Get queue position from world container
-    const queuePos = this.world.getQueuePosition();
-    const startX = queuePos.x;
-
-    // Calculate starting Y position (bottom-aligned with grid)
-    const totalHeight = queue.contents.length * cellSize;
-    let startY = totalHeight - cellSize;
-
-    // Render pipes from bottom to top
-    queue.contents.forEach(pipe => {
+    // Render pipes from bottom to top (index 0 at bottom)
+    queue.contents.forEach((pipe, index) => {
       const sprite = this.getOrCreateSprite();
+      const local = this.world.queueToLocalCorner({x: 0, y: index});
 
       sprite
-        .setPosition(startX, startY + halfSize)
+        .setPosition(local.x + halfSize, local.y + halfSize)
         .setTexture(pipe.assetKey)
         .setRotation(Phaser.Math.DegToRad(pipe.direction.angle))
         .setVisible(true);
 
       this.activeSprites.push(sprite);
-      startY -= cellSize;
     });
 
-    this.logger.debug(`Rendered queue (${queue.contents.length}) at x=${startX}`);
+    this.logger.debug(`Rendered queue (${queue.contents.length} pipes)`);
   }
 
   private getOrCreateSprite(): Phaser.GameObjects.Image {

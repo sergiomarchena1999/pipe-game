@@ -2,6 +2,7 @@ import EventEmitter from "eventemitter3";
 import type { IScoreConfig } from "../config/GameConfig";
 import type { ILogger } from "./logging/ILogger";
 import type { Pipe } from "./domain/pipe/Pipe";
+import { PipeType } from "./constants/PipeShapes";
 
 
 interface ScoreEvents {
@@ -32,10 +33,11 @@ export class ScoreController extends EventEmitter<ScoreEvents> {
   onPipeFlowed(pipe: Pipe): void {
     if (this._gameEnded) return;
 
+    // Dont count start pipe
+    if (pipe.shape.id == PipeType.Start) return;
+
     // Only count each pipe once
-    if (this._flowedPipes.has(pipe)) {
-      return;
-    }
+    if (this._flowedPipes.has(pipe)) return;
 
     this._flowedPipes.add(pipe);
     this._pipesFlowed++;

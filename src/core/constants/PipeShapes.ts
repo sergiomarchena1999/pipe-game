@@ -9,7 +9,7 @@ export enum PipeType {
 }
 
 export interface PipeShape {
-  id: string;
+  id: PipeType;
   connections: readonly Direction[];
   reusable?: boolean;
 }

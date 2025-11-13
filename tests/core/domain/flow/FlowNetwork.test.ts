@@ -102,19 +102,15 @@ describe('FlowNetwork', () => {
     it('should mark ports as used when flow passes through', { timeout: 1000 }, () => {
       const startPipe = grid.startPipe;
       const exitDir = startPipe.openPorts[0];
-      
-      // Flow until completion with safety counter
-      let iterations = 0;
-      const MAX_ITERATIONS = 100;
-      while ((flowNetwork.getActiveState()?.progress ?? 0) < 100 && iterations < MAX_ITERATIONS) {
+
+      flowNetwork.initialize();
+
+      // Simulate some flow time
+      for (let i = 0; i < 50; i++) {
         flowNetwork.update(0.1, 50);
-        iterations++;
       }
-      
-      if (iterations >= MAX_ITERATIONS) {
-        console.warn('Hit max iterations - flow may be stuck');
-      }
-      
+
+      // Even if not fully completed, the start port should be marked as used
       expect(startPipe.usedPorts).toContain(exitDir);
     });
 
@@ -195,9 +191,17 @@ describe('FlowNetwork', () => {
         const rightPipe1 = new Pipe(rightPos1, PipeShapes[PipeType.Straight], rightDir);
         grid.setPipe(grid.getCell(rightPos1), rightPipe1);
       }
-      
+
+      flowNetwork.initialize();
+
       // Flow should select a valid exit and traverse pipes
-      flowNetwork.update(5, 50); // Give enough time to traverse multiple pipes
+      let iterations = 0;
+      const MAX_ITER = 200;
+      while (flowNetwork.getActiveState() && iterations < MAX_ITER) {
+        flowNetwork.update(0.1, 50);
+        iterations++;
+      }
+
       const visited = flowNetwork.getVisitedPortsSnapshot();
       
       // Should have visited at least the start pipe and junction

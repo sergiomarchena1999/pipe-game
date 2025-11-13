@@ -13,7 +13,7 @@ export class WorldContainer {
   private readonly gridHeight: number;
   private background!: Phaser.GameObjects.TileSprite;
 
-  constructor(private readonly scene: Phaser.Scene, config: IGameConfig) {
+  constructor(private readonly scene: Phaser.Scene, private readonly config: IGameConfig) {
     this.cellSize = config.grid.cellSize;
     this.gridWidth = config.grid.width;
     this.gridHeight = config.grid.height;
@@ -78,6 +78,26 @@ export class WorldContainer {
     const queueX = -this.cellSize * 2 - this.cellSize / 2;
     const gridCenterY = (this.gridHeight * this.cellSize) / 2;
     return { x: queueX, y: gridCenterY, startY: 0 };
+  }
+
+  /** 
+   * Convert queue position to top-left corner in container-local coordinates.
+   * Queue is positioned to the left of the grid with 2 cell units of spacing.
+   * Queue coordinates: x=0 is the single column, y starts at 0 (bottom) and goes up
+   */
+  queueToLocalCorner(pos: { x: number; y: number }): { x: number; y: number } {
+    // Queue is 3 cells to the left of the grid (with the spacing)
+    const queueOffsetX = -this.cellSize * 3;
+    
+    // Queue is vertically centered with the grid
+    const gridCenterY = (this.gridHeight * this.cellSize) / 2;
+    const maxQueueHeight = this.config.queue.maxSize * this.cellSize;
+    const queueStartY = gridCenterY - maxQueueHeight / 2;
+    
+    return {
+      x: queueOffsetX + pos.x * this.cellSize,
+      y: queueStartY + pos.y * this.cellSize,
+    };
   }
 
   /** Get total grid dimensions in pixels */
