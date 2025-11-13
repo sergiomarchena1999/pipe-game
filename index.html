@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Pipe Mania</title>
+    <link rel="icon" type="image/png" href="/pipe-game/assets/pipe-corner-d31eNwaI.png" />
+
+    <!-- Optional: preload font or assets -->
+    <!-- <link rel="preload" href="/assets/font.woff2" as="font" type="font/woff2" crossorigin> -->
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        background: #a15d26;
+        overflow: hidden;
+        font-family: sans-serif;
+      }
+
+      #app {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      canvas {
+        display: block;
+        image-rendering: pixelated; /* optional, for retro feel */
+      }
+    </style>
+    <script type="module" crossorigin src="/pipe-game/assets/index-L_iYSmA0.js"></script>
+  </head>
+
+  <body>
+    <div id="app"></div>
+
+    <!-- Vite injects your TS entry automatically -->
+  </body>
+</html>
