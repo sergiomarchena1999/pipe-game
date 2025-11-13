@@ -8,6 +8,13 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   base: '/pipe-game/',
   build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          phaser: ["phaser"]
+        }
+      }
+    },
     outDir: 'dist',
   },
   resolve: {

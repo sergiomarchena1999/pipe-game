@@ -176,6 +176,16 @@ export class MenuScene extends Phaser.Scene {
     const config = this.getConfig();
     if (!config) return;
 
+    // Dynamically load MainScene
+    const loadMainScene = (window as any).loadMainScene as () => Promise<any>;
+    const MainSceneClass = await loadMainScene();
+
+    // Add the scene to Phaser if it hasn't been added yet
+    if (!this.scene.get("MainScene")) {
+      this.scene.add("MainScene", MainSceneClass, false);
+    }
+
+    // Transition to MainScene with fade
     await this.transitionManager.transitionTo("MainScene", {
       config,
       logger: this.logger
