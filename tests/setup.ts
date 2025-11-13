@@ -1,31 +1,25 @@
-import { vi, beforeEach } from "vitest";
-import type { ILogger } from "../src/core/logging/ILogger";
+import { expect, afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import * as matchers from '@testing-library/jest-dom/matchers';
 
-export const initializeMock = vi.fn().mockResolvedValue(undefined);
-export const destroyMock = vi.fn();
+// Extend Vitest's expect with jest-dom matchers
+expect.extend(matchers);
 
-const loggerMock: ILogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
+// Cleanup after each test
+afterEach(() => {
+  cleanup();
+});
+
+// Mock Math.random for deterministic tests when needed
+export const mockMathRandom = (value: number) => {
+  const originalRandom = Math.random;
+  Math.random = () => value;
+  return () => {
+    Math.random = originalRandom;
+  };
 };
 
-declare global {
-  var mockLogger: ILogger;
-}
-
-globalThis.mockLogger = loggerMock;
-
-vi.mock("../src/engine/phaser/PhaserEngine", () => {
-  return {
-    PhaserEngine: class {
-      initialize = initializeMock;
-      destroy = destroyMock;
-    },
-  };
-});
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+// Helper to advance time in tests
+export const advanceTime = (ms: number) => {
+  vi.advanceTimersByTime(ms);
+};

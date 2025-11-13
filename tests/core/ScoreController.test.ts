@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ScoreController } from "../../src/core/ScoreController";
-import { Direction } from "../../src/core/Direction";
+import { Direction } from "../../src/core/domain/Direction";
 
 
 describe("ScoreController", () => {

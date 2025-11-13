@@ -1,6 +1,5 @@
 import type { GridPosition } from "../grid/GridPosition";
 import type { PipeShape } from "../../constants/PipeShapes";
-import type { Grid } from "../grid/Grid";
 
 import { Direction } from "../Direction";
 import { PipeBase } from "./PipeBase";
@@ -122,14 +121,8 @@ export class Pipe extends PipeBase {
   }
 
   // ============================================================================
-  // Position & rotation Helpers
+  // Helpers
   // ============================================================================
-
-  // TODO: Remove grid dependency
-  getNeighbor(direction: Direction, grid: Grid): Pipe | null {
-    const neighborCell = grid.getValidNeighbor(this.position, direction);
-    return neighborCell?.pipe ?? null;
-  }
 
   /**
    * Rotates a list of directions to match a given facing direction.
