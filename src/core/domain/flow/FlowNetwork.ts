@@ -1,3 +1,4 @@
+import EventEmitter from "eventemitter3";
 import type { ILogger } from "../../logging/ILogger";
 import type { Direction } from "../Direction";
 import type { Grid } from "../grid/Grid";
@@ -22,11 +23,21 @@ interface PathResult {
   readonly length: number;
 }
 
+interface FlowNetworkEvents {
+  /** Emitted when water completes flowing through a pipe (reaches 100% progress) */
+  onPipeFlowed: (pipe: Pipe) => void;
+  /** Emitted when water gets stuck (no valid exit direction available) */
+  onFlowStuck: (pipe: Pipe) => void;
+  /** Emitted when water tries to exit but there's no connecting pipe */
+  onNoPathAvailable: (pipe: Pipe, exitDir: Direction) => void;
+}
+
 /**
  * Central flow network that simulates water flowing through pipes.
  * Handles path-finding, progress tracking, and port usage marking.
+ * Emits events for score tracking and win/lose conditions.
  */
-export class FlowNetwork {
+export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
   private activeStates: ActivePipeState[] = [];
   private visitedPorts = new Map<Pipe, Set<Direction>>();
   private pathCache = new Map<PathCacheKey, PathResult>();
@@ -34,7 +45,7 @@ export class FlowNetwork {
   constructor(
     private readonly grid: Grid,
     private readonly logger: ILogger
-  ) {}
+  ) { super(); }
 
   // ============================================================================
   // Public API
@@ -75,6 +86,7 @@ export class FlowNetwork {
    */
   update(delta: number, speed: number) {
     const newStates: ActivePipeState[] = [];
+
     for (const state of this.activeStates) {
       // Handle initial delay
       if (state.delayRemaining > 0) {
@@ -92,6 +104,13 @@ export class FlowNetwork {
       const prevProgress = state.progress;
       if (state.entryDir && prevProgress == 0) {
         state.exitDir = this.selectExitDirection(state.pipe, state.entryDir);
+        
+        // Check if flow is stuck (no valid exit)
+        if (!state.exitDir) {
+          this.logger.warn(`Flow stuck at ${state.pipe.position} - no valid exit`);
+          this.emit("onFlowStuck", state.pipe);
+          continue; // Don't add to newStates - flow ends here
+        }
       }
 
       // Advance progress
@@ -108,25 +127,33 @@ export class FlowNetwork {
         continue;
       }
 
-      // Mark exit port when flow completes pipe
-      if (
-        prevProgress < 100 &&
-        state.progress >= 100 &&
-        state.exitDir
-      ) {
-        this.markVisited(state.pipe, state.exitDir);
-        state.pipe.markPortUsed(state.exitDir);
+      // *** Flow completed this pipe! Emit event ***
+      if (prevProgress < 100 && state.progress >= 100) {
+        this.emit("onPipeFlowed", state.pipe);
+        
+        // Mark exit port
+        if (state.exitDir) {
+          this.markVisited(state.pipe, state.exitDir);
+          state.pipe.markPortUsed(state.exitDir);
+        }
       }
 
       // Try to continue to next pipe
       if (!state.exitDir) continue;
 
-      const nextPipe = this.grid.getNeighborPipe(
-        state.pipe.position,
-        state.exitDir
-      );
+      const nextPipe = this.grid.getNeighborPipe(state.pipe.position, state.exitDir);
 
-      if (!nextPipe || !nextPipe.accepts(state.exitDir.opposite)) {
+      // No pipe at exit - emit event
+      if (!nextPipe) {
+        this.logger.debug(`No pipe available at ${state.pipe.position} exit ${state.exitDir.name}`);
+        this.emit("onNoPathAvailable", state.pipe, state.exitDir);
+        continue;
+      }
+
+      // Pipe doesn't accept connection - emit event
+      if (!nextPipe.accepts(state.exitDir.opposite)) {
+        this.logger.debug(`Pipe at ${nextPipe.position} doesn't accept connection from ${state.exitDir.name}`);
+        this.emit("onNoPathAvailable", state.pipe, state.exitDir);
         continue;
       }
 

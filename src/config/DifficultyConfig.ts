@@ -1,9 +1,10 @@
-import type { IGameConfig, IBombConfig, IGridConfig, PipeWeights } from "./GameConfig";
+import type { IGameConfig, IBombConfig, IGridConfig, PipeWeights, IFlowConfig, IScoreConfig } from "./GameConfig";
 import type { Result } from "../core/ResultTypes";
 
 import { Result as R } from "../core/ResultTypes";
 import { PipeType } from "../core/constants/PipeShapes";
 import { GameConfigValidator } from "./GameConfigValidator";
+import { randomIntFromInterval } from "../core/utils";
 
 
 /** Available difficulty levels. */
@@ -34,23 +35,23 @@ export class DifficultyConfig {
   // ========================================================================
 
   private static readonly EASY_GRID: IGridConfig = {
-    width: 6,
-    height: 6,
+    width: 7,
+    height: 5,
     cellSize: 64,
     blockedPercentage: 5,
     allowStartPipeOnEdge: false,
   };
 
   private static readonly MEDIUM_GRID: IGridConfig = {
-    width: 8,
-    height: 8,
+    width: 9,
+    height: 7,
     cellSize: 64,
     blockedPercentage: 10,
     allowStartPipeOnEdge: false,
   };
 
   private static readonly HARD_GRID: IGridConfig = {
-    width: 10,
+    width: 12,
     height: 10,
     cellSize: 64,
     blockedPercentage: 15,
@@ -74,6 +75,25 @@ export class DifficultyConfig {
   private static readonly HARD_BOMBS: IBombConfig = {
     maxBombs: 1,
     bombTimerSeconds: 1.0,
+  };
+
+  // ========================================================================
+  // Flow Configurations
+  // ========================================================================
+
+  private static readonly EASY_FLOW: IFlowConfig = {
+    pipeFlowSpeed: 15,
+    startDelaySeconds: 12,
+  };
+
+  private static readonly MEDIUM_FLOW: IFlowConfig = {
+    pipeFlowSpeed: 20,
+    startDelaySeconds: 10,
+  };
+
+  private static readonly HARD_FLOW: IFlowConfig = {
+    pipeFlowSpeed: 25,
+    startDelaySeconds: 8,
   };
 
   // ========================================================================
@@ -102,6 +122,25 @@ export class DifficultyConfig {
   };
 
   // ========================================================================
+  // Score Configurations
+  // ========================================================================
+
+  private static readonly EASY_SCORE: IScoreConfig = {
+    winFilledPipesCount: randomIntFromInterval(6, 10),
+    pointsPerPipe: 100,
+  };
+
+  private static readonly MEDIUM_SCORE: IScoreConfig = {
+    winFilledPipesCount: randomIntFromInterval(10, 14),
+    pointsPerPipe: 200,
+  };
+
+  private static readonly HARD_SCORE: IScoreConfig = {
+    winFilledPipesCount: randomIntFromInterval(16, 20),
+    pointsPerPipe: 250,
+  };
+
+  // ========================================================================
   // Complete Configurations
   // ========================================================================
 
@@ -109,27 +148,27 @@ export class DifficultyConfig {
     difficulty: Difficulty.Easy,
     queue: { maxSize: 5, pipeWeights: DifficultyConfig.EASY_WEIGHTS},
     grid: DifficultyConfig.EASY_GRID,
-    bombConfig: DifficultyConfig.EASY_BOMBS,
-    flowStartDelaySeconds: 12,
-    pipeFlowSpeed: 15,
+    bomb: DifficultyConfig.EASY_BOMBS,
+    flow: DifficultyConfig.EASY_FLOW,
+    score: DifficultyConfig.EASY_SCORE
   };
 
   private static readonly MEDIUM_CONFIG: IGameConfig = {
     difficulty: Difficulty.Medium,
     queue: { maxSize: 5, pipeWeights: DifficultyConfig.MEDIUM_WEIGHTS},
     grid: DifficultyConfig.MEDIUM_GRID,
-    bombConfig: DifficultyConfig.MEDIUM_BOMBS,
-    flowStartDelaySeconds: 10,
-    pipeFlowSpeed: 20,
+    bomb: DifficultyConfig.MEDIUM_BOMBS,
+    flow: DifficultyConfig.MEDIUM_FLOW,
+    score: DifficultyConfig.MEDIUM_SCORE,
   };
 
   private static readonly HARD_CONFIG: IGameConfig = {
     difficulty: Difficulty.Hard,
     queue: { maxSize: 5, pipeWeights: DifficultyConfig.HARD_WEIGHTS},
     grid: DifficultyConfig.HARD_GRID,
-    bombConfig: DifficultyConfig.HARD_BOMBS,
-    flowStartDelaySeconds: 8,
-    pipeFlowSpeed: 25,
+    bomb: DifficultyConfig.HARD_BOMBS,
+    flow: DifficultyConfig.HARD_FLOW,
+    score: DifficultyConfig.HARD_SCORE,
   };
 
   // ========================================================================

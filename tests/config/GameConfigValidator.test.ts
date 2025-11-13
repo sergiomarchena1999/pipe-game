@@ -24,12 +24,18 @@ describe("GameConfigValidator", () => {
         [PipeType.Cross]: 0.2,
       },
     },
-    bombConfig: {
+    bomb: {
       bombTimerSeconds: 1,
       maxBombs: 3,
     },
-    flowStartDelaySeconds: 5,
-    pipeFlowSpeed: 10,
+    flow: {
+      startDelaySeconds: 5,
+      pipeFlowSpeed: 10
+    },
+    score: {
+      winFilledPipesCount: 10,
+      pointsPerPipe: 100
+    }
   };
 
   it("returns no errors for valid configuration", () => {
@@ -69,7 +75,7 @@ describe("GameConfigValidator", () => {
   });
 
   it("detects invalid bomb timer and max bombs", () => {
-    const invalid = { ...validConfig, bombConfig: { bombTimerSeconds: 0, maxBombs: 0 } };
+    const invalid = { ...validConfig, bomb: { bombTimerSeconds: 0, maxBombs: 0 } };
     const errors = GameConfigValidator.validate(invalid);
     expect(errors.some(e => e.type === "invalid_bomb_timer")).toBe(true);
     expect(errors.some(e => e.type === "invalid_max_bombs")).toBe(true);
@@ -93,15 +99,27 @@ describe("GameConfigValidator", () => {
   });
 
   it("detects invalid flow speed", () => {
-    const invalid = { ...validConfig, pipeFlowSpeed: 0 };
+    const invalid = { ...validConfig, flow: { startDelaySeconds: 10, pipeFlowSpeed: 0 } };
     const errors = GameConfigValidator.validate(invalid);
     expect(errors.some(e => e.type === "invalid_flow_speed")).toBe(true);
   });
 
   it("detects negative flow delay", () => {
-    const invalid = { ...validConfig, flowStartDelaySeconds: -5 };
+    const invalid = { ...validConfig, flow: { startDelaySeconds: -5, pipeFlowSpeed: 10 } };
     const errors = GameConfigValidator.validate(invalid);
     expect(errors.some(e => e.type === "invalid_flow_delay")).toBe(true);
+  });
+
+  it("detects negative win cells count", () => {
+    const invalid = { ...validConfig, score: { winFilledPipesCount: -5, pointsPerPipe: 100 } };
+    const errors = GameConfigValidator.validate(invalid);
+    expect(errors.some(e => e.type === "invalid_win_cell_count")).toBe(true);
+  });
+
+  it("detects negative points", () => {
+    const invalid = { ...validConfig, score: { winFilledPipesCount: 20, pointsPerPipe: -100 } };
+    const errors = GameConfigValidator.validate(invalid);
+    expect(errors.some(e => e.type === "invalid_points_per_pipe")).toBe(true);
   });
 });
 

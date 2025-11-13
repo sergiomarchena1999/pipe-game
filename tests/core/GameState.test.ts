@@ -33,12 +33,18 @@ describe('GameState', () => {
           [PipeType.Start]: 0,
         },
       },
-      bombConfig: {
+      bomb: {
         maxBombs: 2,
         bombTimerSeconds: 2,
       },
-      pipeFlowSpeed: 50,
-      flowStartDelaySeconds: 1,
+      flow: {
+        pipeFlowSpeed: 50,
+        startDelaySeconds: 1
+      },
+      score: {
+        winFilledPipesCount: 10,
+        pointsPerPipe: 100
+      }
     };
     
     gameState = new GameState(config, logger);

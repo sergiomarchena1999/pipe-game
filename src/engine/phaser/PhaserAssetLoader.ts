@@ -3,6 +3,9 @@ import type { IPhaserScene } from "./IPhaserScene";
 
 import tileBackground from "../../assets/tile-background.png";
 
+import winnerPanel from "../../assets/ui/winner-panel.png";
+import loserPanel from "../../assets/ui/loser-panel.png";
+
 import titlePipe from "../../assets/menu/title-pipe.png";
 import titleMania from "../../assets/menu/title-mania.png";
 
@@ -40,6 +43,8 @@ export class PhaserAssetLoader {
    */
   private static readonly ASSETS = {
     "tile-background": tileBackground,
+    "winner-panel": winnerPanel,
+    "loser-panel": loserPanel,
     "title-pipe": titlePipe,
     "title-mania": titleMania,
     "bomb-idle": bombIdle,

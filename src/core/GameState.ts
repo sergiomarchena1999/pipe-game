@@ -20,6 +20,9 @@ interface GameStateEvents {
   onStopped: () => void;
   onBombStarted: (pos: GridPosition, durationMs: number) => void;
   onBombCompleted: (newPipe: Pipe) => void;
+  onScoreUpdated: (score: number, pipesFlowed: number) => void;
+  onGameWon: (finalScore: number, pipesFlowed: number) => void;
+  onGameLost: (finalScore: number, pipesFlowed: number, reason: string) => void;
 }
 
 /**
@@ -45,24 +48,47 @@ export class GameState extends EventEmitter<GameStateEvents> {
     this._queue = new PipeQueue(this.logger, this.config.queue);
     this._grid = new Grid(this.config.grid, this.logger);
     this._flowNetwork = new FlowNetwork(this._grid, logger);
-    this._score = new ScoreController(
-      this.config.grid.width, 
-      this.config.grid.height, 
-      this._grid, 
-      this.logger
-    );
+    this._score = new ScoreController(this.config.score, this.logger);
     
     // Create bomb controller with event callbacks
     this._bombController = new BombController(
       this._grid,
       this._queue,
       this.logger,
-      this.config.bombConfig,
+      this.config.bomb,
       {
         onBombStarted: (pos, durationMs) => this.emit("onBombStarted", pos, durationMs),
         onBombCompleted: (newPipe) => this.emit("onBombCompleted", newPipe)
       }
     );
+
+    // Wire up flow network events to score controller
+    this._flowNetwork.on("onPipeFlowed", (pipe) => {
+      this._score.onPipeFlowed(pipe);
+    });
+
+    this._flowNetwork.on("onFlowStuck", () => {
+      this._score.onFlowStuck();
+    });
+
+    this._flowNetwork.on("onNoPathAvailable", () => {
+      this._score.onNoPathAvailable();
+    });
+
+    // Wire up score controller events to game state
+    this._score.on("onScoreUpdated", (score, pipesFlowed) => {
+      this.emit("onScoreUpdated", score, pipesFlowed);
+    });
+
+    this._score.on("onWin", (finalScore, pipesFlowed) => {
+      this.logger.info(`GAME WON! Score: ${finalScore}, Pipes: ${pipesFlowed}`);
+      this.emit("onGameWon", finalScore, pipesFlowed);
+    });
+
+    this._score.on("onLose", (finalScore, pipesFlowed, reason) => {
+      this.logger.info(`GAME LOST (${reason})! Score: ${finalScore}, Pipes: ${pipesFlowed}`);
+      this.emit("onGameLost", finalScore, pipesFlowed, reason);
+    });
 
     this.logger.debug("GameState constructed — grid and queue created.");
   }
@@ -91,7 +117,7 @@ export class GameState extends EventEmitter<GameStateEvents> {
     return this._bombController;
   }
 
-  /** Gets the bomb controller. */
+  /** Gets the flow network. */
   get flowNetwork(): FlowNetwork {
     return this._flowNetwork;
   }
@@ -119,17 +145,14 @@ export class GameState extends EventEmitter<GameStateEvents> {
       }
 
       // Initialize flow with delay
-      this._flowNetwork.initialize(this.config.flowStartDelaySeconds);
+      this._flowNetwork.initialize(this.config.flow.startDelaySeconds);
 
       // Mark as ready
       this._initialized = true;
 
       // Notify listeners
       this.emit("onInitialized", this._grid);
-
-      this.logger.info(
-        `GameState started successfully (${this.config.difficulty} difficulty)`
-      );
+      this.logger.info(`GameState started successfully (${this.config.difficulty} difficulty)`);
 
       return R.ok(undefined);
     } catch (error) {
@@ -143,9 +166,14 @@ export class GameState extends EventEmitter<GameStateEvents> {
    * @param deltaTime Time elapsed in seconds since last update
    */
   update(deltaTime: number): void {
+    // Don't update if game has ended
+    if (this._score.gameEnded) {
+      return;
+    }
+
     this._currentTime += deltaTime;
     this._bombController.update(this._currentTime);
-    this._flowNetwork.update(deltaTime, this.config.pipeFlowSpeed);
+    this._flowNetwork.update(deltaTime, this.config.flow.pipeFlowSpeed);
   }
 
   /** Stops the game and cleans up state. */
@@ -183,6 +211,12 @@ export class GameState extends EventEmitter<GameStateEvents> {
   /** Destroys the game state and releases resources. */
   destroy(): void {
     this.stop();
+    
+    // Clean up event listeners
+    this._flowNetwork.removeAllListeners();
+    this._score.removeAllListeners();
+    this.removeAllListeners();
+    
     this.logger.info("GameState destroyed");
   }
 
@@ -200,6 +234,12 @@ export class GameState extends EventEmitter<GameStateEvents> {
     // Validate: game must be initialized
     if (!this._initialized) {
       this.logger.warn("Cannot place pipe — game not initialized");
+      return R.fail('game_not_initialized');
+    }
+
+    // Validate: game must not be ended
+    if (this._score.gameEnded) {
+      this.logger.warn("Cannot place pipe — game has ended");
       return R.fail('game_not_initialized');
     }
 
@@ -239,14 +279,10 @@ export class GameState extends EventEmitter<GameStateEvents> {
         return R.fail('cell_blocked');
       }
 
-      this.logger.info(
-        `Placed ${queued.shape.id} at ${cell.position} [${queued.direction}]`
-      );
+      this.logger.info(`Placed ${queued.shape.id} at ${cell.position} [${queued.direction}]`);
 
-      // Update score if pipe connects to network
-      if (this._grid.isConnectedToNetwork(pipe)) {
-        this._score.updateScore();
-      }
+      // Invalidate path cache since grid changed
+      this._flowNetwork.invalidatePathCache(pipe);
 
       return R.ok(pipe);
     } catch (error) {

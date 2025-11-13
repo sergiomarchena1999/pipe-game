@@ -8,6 +8,8 @@ import { AssetRenderer } from "./AssetRenderer";
  * Handles grid clicks and can be extended for other input types.
  */
 export class InputManager {
+  private enabled = true;
+
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly state: GameState,
@@ -17,18 +19,25 @@ export class InputManager {
 
   initialize(): void {
     this.scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      this.handlePointerDown(pointer);
+      if (this.enabled) this.handlePointerDown(pointer);
     });
 
-    // Handle mouse movement for cursor
     this.scene.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      this.handlePointerMove(pointer);
+      if (this.enabled) this.handlePointerMove(pointer);
     });
 
-    // Hide cursor when pointer leaves the game area
     this.scene.input.on("pointerout", () => {
-      this.renderer.hideGridCursor();
+      if (this.enabled) this.renderer.hideGridCursor();
     });
+  }
+
+  enable(): void {
+    this.enabled = true;
+  }
+
+  disable(): void {
+    this.enabled = false;
+    this.renderer.hideGridCursor(); // optional: hide cursor when disabled
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {

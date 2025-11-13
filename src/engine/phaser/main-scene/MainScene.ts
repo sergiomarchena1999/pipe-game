@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { WorldContainer } from "../WorldContainer";
 import { AssetRenderer } from "./AssetRenderer";
 import { InputManager } from "./InputManager";
+import { UIRenderer } from "./renderers/UIRenderer";
 import { GameState } from "../../../core/GameState";
 
 import type { IGameConfig } from "../../../config/GameConfig";
@@ -20,10 +21,11 @@ export class MainScene extends Phaser.Scene {
   private config!: IGameConfig;
   private logger!: ILogger;
   private state!: GameState;
-  
+
+  private worldContainer!: WorldContainer;
   private assetRenderer!: AssetRenderer;
   private inputManager!: InputManager;
-  private worldContainer!: WorldContainer;
+  private uiRenderer!: UIRenderer;
 
   constructor() {
     super({ key: "MainScene" });
@@ -77,7 +79,11 @@ export class MainScene extends Phaser.Scene {
     );
     this.inputManager.initialize();
 
-    this.createBackButton();
+    this.uiRenderer = new UIRenderer(this, this.state, this.logger);
+    this.uiRenderer.createBaseUI();
+
+    // Handle UI events
+    this.events.on("ui:backToMenu", () => this.returnToMenu());
   }
 
   update(_time: number, delta: number): void {
@@ -102,25 +108,45 @@ export class MainScene extends Phaser.Scene {
       this.assetRenderer.removePipe(newPipe.position);
       this.assetRenderer.addPipe(newPipe);
     });
-  }
 
-  private createBackButton(): void {
-    const backButton = this.add.text(this.cameras.main.width - 20, 20, "Back to Menu", {
-      fontSize: "20px",
-      color: "#ffffff",
-      backgroundColor: "#000000",
-      padding: { x: 12, y: 6 },
-    })
-      .setOrigin(1, 0)
-      .setDepth(1000)
-      .setScrollFactor(0) // Keep fixed on screen
-      .setInteractive({ useHandCursor: true });
+    // Score update event
+    this.state.on("onScoreUpdated", (score, pipesFlowed) => {
+      this.uiRenderer.updateScoreDisplay(score, pipesFlowed);
+    });
 
-    backButton.on("pointerdown", () => {
-      this.returnToMenu();
+    // Win event
+    this.state.on("onGameWon", (finalScore, pipesFlowed) => {
+      this.uiRenderer.showGameOverPanel(
+        "winner-panel",
+        finalScore,
+        pipesFlowed,
+        () => this.restartGame(),
+        () => this.returnToMenu()
+      );
+    });
+
+    // Lose event
+    this.state.on("onGameLost", (finalScore, pipesFlowed) => {
+      this.uiRenderer.showGameOverPanel(
+        "loser-panel",
+        finalScore,
+        pipesFlowed,
+        () => this.restartGame(),
+        () => this.returnToMenu()
+      );
     });
   }
 
+  /** Restart current game with same configuration */
+  private restartGame(): void {
+    this.cameras.main.fadeOut(300, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      // Restart with same config
+      this.scene.restart({ config: this.config, logger: this.logger });
+    });
+  }
+
+  /** Transition back to main menu */
   private returnToMenu(): void {
     this.state.stop();
     
@@ -130,6 +156,7 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  /** Clean up */
   shutdown(): void {
     if (this.state) {
       this.state.stop();

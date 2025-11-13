@@ -1,6 +1,7 @@
 import { PipeType } from "../core/constants/PipeShapes";
 import type { Difficulty } from "./DifficultyConfig";
 
+
 /**
  * Type-safe game configuration interface.
  * All fields are readonly to prevent accidental mutation.
@@ -9,10 +10,9 @@ export interface IGameConfig {
   readonly difficulty: Difficulty;
   readonly grid: IGridConfig;
   readonly queue: IQueueConfig;
-  readonly bombConfig: IBombConfig;
-  readonly flowStartDelaySeconds: number;
-  readonly pipeFlowSpeed: number;
-  readonly debug?: boolean;
+  readonly bomb: IBombConfig;
+  readonly flow: IFlowConfig;
+  readonly score: IScoreConfig;
 }
 
 /** Bomb behavior configuration. */
@@ -34,6 +34,18 @@ export interface IGridConfig {
   readonly cellSize: number;
   readonly blockedPercentage: number;
   readonly allowStartPipeOnEdge: boolean;
+}
+
+/** Flow behavior configuration. */
+export interface IFlowConfig {
+  readonly startDelaySeconds: number;
+  readonly pipeFlowSpeed: number;
+}
+
+/** Flow behavior configuration. */
+export interface IScoreConfig {
+  readonly winFilledPipesCount: number;
+  readonly pointsPerPipe: number;
 }
 
 /**

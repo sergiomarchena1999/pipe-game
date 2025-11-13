@@ -36,12 +36,18 @@ describe('Integration: Full Game Flow', () => {
           [PipeType.Start]: 0,
         },
       },
-      bombConfig: {
+      bomb: {
         maxBombs: 3,
         bombTimerSeconds: 1,
       },
-      pipeFlowSpeed: 100,
-      flowStartDelaySeconds: 0,
+      flow: {
+        pipeFlowSpeed: 50,
+        startDelaySeconds: 1
+      },
+      score: {
+        winFilledPipesCount: 10,
+        pointsPerPipe: 100
+      }
     };
     
     gameState = new GameState(config, createMockLogger());

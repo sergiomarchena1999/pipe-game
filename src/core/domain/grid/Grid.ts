@@ -29,9 +29,7 @@ export class Grid {
     this.height = config.height;
     this.cells = this.initializeGrid();
     
-    this.logger.info(
-      `Grid created with dimensions ${this.width}x${this.height}`
-    );
+    this.logger.info(`Grid created with dimensions ${this.dimensions}`);
   }
 
   // ============================================================================
@@ -52,7 +50,6 @@ export class Grid {
     try {
       this.blockRandomCells(this.config.blockedPercentage);
       const startPipeResult = this.createStartPipe();
-      
       if (!startPipeResult.success) {
         return R.fail('initialization_failed');
       }
@@ -310,61 +307,44 @@ export class Grid {
   }
 
   /** Creates the start pipe at a random valid location. */
-  private createStartPipe(): Result<Pipe, 'no_empty_cells' | 'no_valid_direction'> {
-    const cellResult = this.selectRandomEmptyCell(this.config.allowStartPipeOnEdge);
-    if (!cellResult.success) {
-      return cellResult;
-    }
+  private createStartPipe(): Result<Pipe, 'no_valid_start_position'> {
+    const validCells: { cell: GridCell; directions: Direction[] }[] = [];
 
-    const cell = cellResult.value;
-    const directionResult = this.selectValidStartDirection(cell);
-    if (!directionResult.success) {
-      return directionResult;
-    }
-
-    const startPipe = new Pipe(
-      cell.position,
-      PipeShapes[PipeType.Start],
-      directionResult.value
-    );
-    
-    const setResult = this.setPipe(cell, startPipe);
-    if (!setResult.success) {
-      this.logger.error("Failed to place start pipe");
-      return R.fail('no_empty_cells');
-    }
-
-    this.logger.info(`Start pipe placed at ${cell.position} facing ${startPipe.direction}`);
-    return R.ok(startPipe);
-  }
-
-  /** Selects a random empty cell for the start pipe. */
-  private selectRandomEmptyCell(
-    allowEdges: boolean
-  ): Result<GridCell, 'no_empty_cells'> {
-    const emptyCells: GridCell[] = [];
-
-    const minX = allowEdges ? 0 : 1;
-    const minY = allowEdges ? 0 : 1;
-    const maxX = allowEdges ? this.width : this.width - 1;
-    const maxY = allowEdges ? this.height : this.height - 1;
-
-    for (let y = minY; y < maxY; y++) {
-      for (let x = minX; x < maxX; x++) {
+    // Find all empty cells that have at least one valid direction
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
         const cell = this.cells[y][x];
-        if (cell.isEmpty) {
-          emptyCells.push(cell);
+        if (!cell.isEmpty) continue;
+
+        const validDirs = Direction.All.filter(dir => this.getValidNeighbor(cell.position, dir) !== null);
+        if (validDirs.length > 0) {
+          validCells.push({ cell, directions: validDirs });
         }
       }
     }
 
-    if (emptyCells.length === 0) {
-      this.logger.error("No empty cells available for start pipe");
-      return R.fail('no_empty_cells');
+    if (validCells.length === 0) {
+      this.logger.error("No valid start position found (empty cell with valid direction)");
+      return R.fail('no_valid_start_position');
     }
 
-    const randomIndex = Math.floor(Math.random() * emptyCells.length);
-    return R.ok(emptyCells[randomIndex]);
+    // Pick a random valid cell
+    const index = Math.floor(Math.random() * validCells.length);
+    const { cell, directions } = validCells[index];
+
+    // Pick a random valid direction from the available directions
+    const dirIndex = Math.floor(Math.random() * directions.length);
+    const direction = directions[dirIndex];
+
+    const startPipe = new Pipe(cell.position, PipeShapes[PipeType.Start], direction);
+    const setResult = this.setPipe(cell, startPipe);
+    if (!setResult.success) {
+      this.logger.error("Failed to place start pipe despite having a valid cell/direction");
+      return R.fail('no_valid_start_position');
+    }
+
+    this.logger.info(`Start pipe placed at ${cell.position} facing ${startPipe.direction}`);
+    return R.ok(startPipe);
   }
 
   /** Blocks random cells based on difficulty percentage. */
@@ -382,25 +362,6 @@ export class Grid {
     }
 
     this.logger.info(`Blocked ${cellsToBlock} cells (${percentage}%) for difficulty`);
-  }
-
-  /** Selects a valid direction for the start pipe. */
-  private selectValidStartDirection(
-    cell: GridCell
-  ): Result<Direction, 'no_valid_direction'> {
-    const validDirections = Direction.All.filter(dir => {
-      return this.getValidNeighbor(cell.position, dir) !== null;
-    });
-
-    if (validDirections.length === 0) {
-      this.logger.error(
-        `No valid start directions for cell at ${cell.position}`
-      );
-      return R.fail('no_valid_direction');
-    }
-
-    const randomIndex = Math.floor(Math.random() * validDirections.length);
-    return R.ok(validDirections[randomIndex]);
   }
 
   // ============================================================================

@@ -13,6 +13,8 @@ export type ConfigValidationError =
   | 'invalid_flow_speed'
   | 'invalid_flow_delay'
   | 'invalid_pipe_weights'
+  | 'invalid_win_cell_count'
+  | 'invalid_points_per_pipe'
   | 'invalid_blocked_percentage';
 
 /** Detailed validation result with specific error information. */
@@ -50,23 +52,39 @@ export class GameConfigValidator {
     }
 
     // Bomb configuration validation
-    errors.push(...this.validateBombConfig(config.bombConfig));
+    errors.push(...this.validateBombConfig(config.bomb));
 
     // Flow configuration validation
-    if (config.pipeFlowSpeed <= 0) {
+    if (config.flow.pipeFlowSpeed <= 0) {
       errors.push({
         type: 'invalid_flow_speed',
-        message: `Flow speed must be positive, got ${config.pipeFlowSpeed}`,
+        message: `Flow speed must be positive, got ${config.flow.pipeFlowSpeed}`,
         field: 'pipeFlowSpeed',
       });
     }
 
-    if (config.flowStartDelaySeconds < 0) {
+    if (config.flow.startDelaySeconds < 0) {
       errors.push({
         type: 'invalid_flow_delay',
-        message: `Flow delay cannot be negative, got ${config.flowStartDelaySeconds}`,
+        message: `Flow delay cannot be negative, got ${config.flow.startDelaySeconds}`,
         field: 'flowStartDelaySeconds',
       });
+    }
+
+    if (config.score.winFilledPipesCount <= 0) {
+      errors.push({
+        type: 'invalid_win_cell_count',
+        message: `Amount cells needed to win must be positive, got ${config.score.winFilledPipesCount}`,
+        field: 'winCellsCount',
+      })
+    }
+
+    if (config.score.pointsPerPipe < 0) {
+      errors.push({
+        type: 'invalid_points_per_pipe',
+        message: `Points per pipe cannot be negative, got ${config.score.pointsPerPipe}`,
+        field: 'pointsPerPipe',
+      })
     }
 
     return errors;

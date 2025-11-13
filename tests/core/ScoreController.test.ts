@@ -1,99 +1,143 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ScoreController } from "../../src/core/ScoreController";
-import { Direction } from "../../src/core/domain/Direction";
+import { IScoreConfig } from "../../src/config/GameConfig";
+import { ILogger } from "../../src/core/logging/ILogger";
+import { Pipe } from "../../src/core/domain/pipe/Pipe";
 
 
 describe("ScoreController", () => {
-  let gridMock: any;
-  let scoreCtrl: ScoreController;
-
-  // Pipe mocks
-  let startPipeMock: any;
-  let pipeA: any;
-  let pipeB: any;
+  let logger: ILogger;
+  let config: IScoreConfig;
+  let controller: ScoreController;
+  let mockPipe: Pipe;
 
   beforeEach(() => {
-    // Start pipe at (0,0), open to the right
-    startPipeMock = {
-      position: { x: 0, y: 0 },
-      openPorts: [Direction.Right],
-      accepts: vi.fn((dir: Direction) => dir === Direction.Left),
+    logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    } as unknown as ILogger;
+
+    config = {
+      pointsPerPipe: 10,
+      winFilledPipesCount: 3,
     };
 
-    // Pipe A at (1,0), open left/right
-    pipeA = {
-      position: { x: 1, y: 0 },
-      openPorts: [Direction.Left, Direction.Right],
-      accepts: vi.fn((dir: Direction) => dir === Direction.Left || dir === Direction.Right),
-    };
+    controller = new ScoreController(config, logger);
+    mockPipe = {} as Pipe;
+  });
 
-    // Pipe B at (2,0), open left
-    pipeB = {
-      position: { x: 2, y: 0 },
-      openPorts: [Direction.Left],
-      accepts: vi.fn((dir: Direction) => dir === Direction.Left),
-    };
+  describe("Initialization", () => {
+    it("should start with the correct initial state", () => {
+      expect(controller.score).toBe(0);
+      expect(controller.pipesFlowed).toBe(0);
+      expect(controller.gameEnded).toBe(false);
+      expect(controller.progressPercent).toBe(0);
+    });
+  });
 
-    // Grid mock
-    gridMock = {
-      width: 3,
-      height: 1,
-      startPipe: startPipeMock,
-      isValidPosition: vi.fn((x: number, y: number) => x >= 0 && x < 3 && y === 0),
-      getPipeAt: vi.fn((x: number, y: number) => {
-        if (x === 0) return startPipeMock;
-        if (x === 1) return pipeA;
-        if (x === 2) return pipeB;
-        return null;
-      }),
-    };
+  describe("Scoring and Flow", () => {
+    it("should increase score and emit onScoreUpdated when a pipe flows", () => {
+      const onScoreUpdated = vi.fn();
+      controller.on("onScoreUpdated", onScoreUpdated);
 
-    gridMock.getConnectedNeighbors = vi.fn((pipe: any) => {
-      const { x } = pipe.position;
-      if (x === 0) return [pipeA];
-      if (x === 1) return [startPipeMock];
-      if (x === 2) return [pipeA];
-      return [];
+      controller.onPipeFlowed(mockPipe);
+
+      expect(controller.score).toBe(10);
+      expect(controller.pipesFlowed).toBe(1);
+      expect(onScoreUpdated).toHaveBeenCalledWith(10, 1);
     });
 
-    scoreCtrl = new ScoreController(gridMock.width, gridMock.height, gridMock, globalThis.mockLogger);
-  });
+    it("should not count the same pipe twice", () => {
+      controller.onPipeFlowed(mockPipe);
+      controller.onPipeFlowed(mockPipe); // same pipe again
 
-  it("should initialize score to 0", () => {
-    expect(scoreCtrl.score).toBe(0);
-  });
-
-  it("should count connected pipes correctly", () => {
-    gridMock.getConnectedNeighbors = vi.fn((pipe: any) => {
-      const { x } = pipe.position;
-      if (x === 0) return [pipeA];
-      if (x === 1) return [startPipeMock, pipeB];
-      if (x === 2) return [pipeA];
-      return [];
+      expect(controller.score).toBe(10);
+      expect(controller.pipesFlowed).toBe(1);
     });
-    scoreCtrl.updateScore();
-    expect(scoreCtrl.score).toBe(3);
-    expect(globalThis.mockLogger.info).toHaveBeenCalledWith("Score updated: 3 connected pipes");
   });
 
-  it("should reset score to 0", () => {
-    scoreCtrl.updateScore();
-    scoreCtrl.reset();
-    expect(scoreCtrl.score).toBe(0);
-    expect(globalThis.mockLogger.info).toHaveBeenCalledWith("Score reset to 0");
+  describe("Win Condition", () => {
+    it("should trigger win when enough pipes flow", () => {
+      const onWin = vi.fn();
+      controller.on("onWin", onWin);
+
+      const pipes = [{}, {}, {}] as Pipe[];
+      pipes.forEach((p) => controller.onPipeFlowed(p));
+
+      expect(controller.gameEnded).toBe(true);
+      expect(onWin).toHaveBeenCalledWith(30, 3);
+      expect(logger.info).toHaveBeenCalledWith(
+        "WIN! Final score: 30 (3 pipes)"
+      );
+    });
   });
 
-  it("should handle grid with no start pipe", () => {
-    gridMock.startPipe = null;
-    scoreCtrl.updateScore();
-    expect(scoreCtrl.score).toBe(0);
+  describe("Lose Conditions", () => {
+    it("should trigger lose when flow is stuck before winning", () => {
+      const onLose = vi.fn();
+      controller.on("onLose", onLose);
+
+      controller.onPipeFlowed({} as Pipe); // 1 of 3
+      controller.onFlowStuck();
+
+      expect(controller.gameEnded).toBe(true);
+      expect(onLose).toHaveBeenCalledWith(10, 1, "flow_stuck");
+      expect(logger.warn).toHaveBeenCalledWith("Flow stuck at 1/3 pipes");
+    });
+
+    it("should trigger lose when no path is available before winning", () => {
+      const onLose = vi.fn();
+      controller.on("onLose", onLose);
+
+      controller.onPipeFlowed({} as Pipe); // 1 of 3
+      controller.onNoPathAvailable();
+
+      expect(controller.gameEnded).toBe(true);
+      expect(onLose).toHaveBeenCalledWith(10, 1, "no_path");
+      expect(logger.warn).toHaveBeenCalledWith("No path available at 1/3 pipes");
+    });
+
+    it("should not trigger lose if already won", () => {
+      controller.onPipeFlowed({} as Pipe);
+      controller.onPipeFlowed({} as Pipe);
+      controller.onPipeFlowed({} as Pipe); // triggers win
+
+      const onLose = vi.fn();
+      controller.on("onLose", onLose);
+
+      controller.onNoPathAvailable();
+      controller.onFlowStuck();
+
+      expect(onLose).not.toHaveBeenCalled();
+    });
   });
 
-  it("should only count connected pipes when one is disconnected", () => {
-    const originalGetPipeAt = gridMock.getPipeAt;
-    gridMock.getPipeAt = vi.fn((x: number, y: number) => (x === 2 ? null : originalGetPipeAt(x, y)));
+  describe("Reset", () => {
+    it("should reset all state correctly", () => {
+      controller.onPipeFlowed({} as Pipe);
+      controller.onFlowStuck(); // lose
 
-    scoreCtrl.updateScore();
-    expect(scoreCtrl.score).toBe(2);
+      controller.reset();
+
+      expect(controller.score).toBe(0);
+      expect(controller.pipesFlowed).toBe(0);
+      expect(controller.gameEnded).toBe(false);
+      expect(controller.progressPercent).toBe(0);
+      expect(logger.info).toHaveBeenCalledWith("Score controller reset");
+    });
+  });
+
+  describe("Progress", () => {
+    it("should compute progress percentage correctly", () => {
+      controller.onPipeFlowed({} as Pipe);
+      expect(controller.progressPercent).toBeCloseTo(33.33, 1);
+
+      controller.onPipeFlowed({} as Pipe);
+      expect(controller.progressPercent).toBeCloseTo(66.66, 1);
+
+      controller.onPipeFlowed({} as Pipe);
+      expect(controller.progressPercent).toBe(100);
+    });
   });
 });
