@@ -7,9 +7,6 @@
     <title>Pipe Mania</title>
     <link rel="icon" type="image/png" href="/src/assets/pipes/pipe-corner.png" />
 
-    <!-- Optional: preload font or assets -->
-    <!-- <link rel="preload" href="/assets/font.woff2" as="font" type="font/woff2" crossorigin> -->
-
     <style>
       html,
       body {
@@ -32,7 +29,7 @@
 
       canvas {
         display: block;
-        image-rendering: pixelated; /* optional, for retro feel */
+        image-rendering: pixelated;
       }
     </style>
   </head>
@@ -40,7 +37,7 @@
   <body>
     <div id="app"></div>
 
-    <!-- Vite injects your TS entry automatically -->
-    <script type="module" src="/src/main.ts"></script>
+    <!-- Vite injects TS entry automatically -->
+    <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

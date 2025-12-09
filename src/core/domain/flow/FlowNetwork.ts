@@ -1,8 +1,8 @@
 import EventEmitter from "eventemitter3";
 import type { ILogger } from "../../logging/ILogger";
+import type { Pipe, PipePort } from "../pipe/Pipe";
 import type { Direction } from "../Direction";
 import type { Grid } from "../grid/Grid";
-import type { Pipe } from "../pipe/Pipe";
 
 
 /** Represents the state of water flowing through a single pipe. */
@@ -226,7 +226,7 @@ export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
     }
 
     // Use longest-path heuristic to choose best exit
-    const { direction } = this.calculateLongestPath(pipe, entryDir, new Set());
+    const { direction } = this.calculateLongestPath(pipe, pipe.getPort(entryDir)!, new Set());
     if (direction) {
       this.logger.debug(`Selected exit ${direction.name} from ${pipe.position} (longest path)`);
       return direction;
@@ -248,39 +248,34 @@ export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
    * Calculates the longest path from a pipe/direction combination.
    * Uses memoization to avoid recalculating the same paths.
    */
-  private calculateLongestPath(pipe: Pipe, entryDir: Direction, visitedInPath: Set<Pipe>): PathResult {
-    // Check cache first
-    const cacheKey = this.createCacheKey(pipe, entryDir);
+  private calculateLongestPath(pipe: Pipe, entryPort: PipePort, visitedInPath: Set<PipePort>): PathResult {
+    // Generate cache key based on pipe and entry port direction
+    const cacheKey = this.createCacheKey(pipe, entryPort.direction);
     const cached = this.pathCache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
-    // Mark this pipe as visited in current path
-    visitedInPath.add(pipe);
+    // Mark port as visited
+    visitedInPath.add(entryPort);
 
     let bestDirection: Direction | null = null;
     let maxLength = -1;
 
-    const openPorts = pipe.openPorts.filter(d => d !== entryDir);
-
+    const openPorts = pipe.openPorts.filter(d => d !== entryPort.direction);
     for (const exitDir of openPorts) {
       const nextPipe = this.grid.getNeighborPipe(pipe.position, exitDir);
-      // Skip if no neighbor or can't connect
-      if (!nextPipe || !nextPipe.accepts(exitDir.opposite)) {
-        continue;
-      }
+      if (!nextPipe) continue;
 
-      // Skip if we'd create a cycle
-      if (visitedInPath.has(nextPipe)) {
-        continue;
-      }
+      const oppositePort = nextPipe.getPort(exitDir.opposite);
+      if (!oppositePort || oppositePort.used) continue;
 
-      // Recursively calculate downstream path length
+      // Skip if this port was already visited in the current path (avoid cycles)
+      if (visitedInPath.has(oppositePort)) continue;
+
+      // Recursively calculate downstream path
       const subVisited = new Set(visitedInPath);
       const { length: downstreamLength } = this.calculateLongestPath(
         nextPipe,
-        exitDir.opposite,
+        oppositePort,
         subVisited
       );
 
@@ -291,12 +286,12 @@ export class FlowNetwork extends EventEmitter<FlowNetworkEvents> {
       }
     }
 
-    // Cache and return result
     const result: PathResult = {
-      direction: bestDirection,
+      direction: bestDirection ?? null,
       length: Math.max(0, maxLength),
     };
 
+    // Cache result
     this.pathCache.set(cacheKey, result);
     return result;
   }

@@ -6,16 +6,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
-  base: '/pipe-game/',
+  base: './',
   build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
     rollupOptions: {
       output: {
         manualChunks: {
           phaser: ["phaser"]
         }
       }
-    },
-    outDir: 'dist',
+    }
   },
   resolve: {
     alias: {

@@ -6,7 +6,7 @@ import { PipeBase } from "./PipeBase";
 
 
 /** Available pipe piece types, each with distinct connection patterns. */
-class PipePort {
+export class PipePort {
   constructor(
     public readonly direction: Direction,
     public used: boolean = false
@@ -59,6 +59,11 @@ export class Pipe extends PipeBase {
   /** Returns a boolean indicating if the pipe has any port being used */
   get isBlocked(): boolean {
     return this.usedPorts.length > 0 || this.bombState.isBombing;
+  }
+
+  /** Returns the PipePort for a given direction, or undefined if it doesn't exist */
+  getPort(dir: Direction): PipePort | undefined {
+    return this.ports.get(dir);
   }
 
   /** Checks if water can enter from this direction */
