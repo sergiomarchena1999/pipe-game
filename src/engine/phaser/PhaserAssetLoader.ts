@@ -1,39 +1,6 @@
 import type { ILogger } from "../../core/logging/ILogger";
 import type { IPhaserScene } from "./IPhaserScene";
 
-import tileBackground from "../../assets/tile-background.png";
-
-import winnerPanel from "../../assets/ui/winner-panel.png";
-import loserPanel from "../../assets/ui/loser-panel.png";
-import buttonBlue from "../../assets/ui/button-blue.png";
-import buttonOrange from "../../assets/ui/button-orange.png";
-import buttonStart from "../../assets/ui/button-start.png";
-import buttonStartHover from "../../assets/ui/button-start-hover.png";
-
-import menuTitle1 from "../../assets/menu/menu-title-1.png";
-import menuTitle2 from "../../assets/menu/menu-title-2.png";
-
-import bombIdle from "../../assets/bomb/bomb-idle.png";
-import bombExplosion1 from "../../assets/bomb/bomb-explosion-1.png";
-import bombExplosion2 from "../../assets/bomb/bomb-explosion-2.png";
-
-import gridCell from "../../assets/grid/grid-background.png";
-import gridBlock from "../../assets/grid/grid-block.png";
-import gridBorderSide from "../../assets/grid/grid-border-side.png";
-import gridBorderCorner from "../../assets/grid/grid-border-corner.png";
-
-import gridCursor from "../../assets/grid/grid-cursor.png";
-import gridCursorAlt from "../../assets/grid/grid-cursor-alt.png";
-
-import queueSelected from "../../assets/queue/queue-selected.png";
-import queueCorner from "../../assets/queue/queue-corner.png";
-import queueSide from "../../assets/queue/queue-side.png";
-
-import pipeStraight from "../../assets/pipes/pipe-straight.png";
-import pipeCorner from "../../assets/pipes/pipe-corner.png";
-import pipeCross from "../../assets/pipes/pipe-cross.png";
-import pipeStart from "../../assets/pipes/pipe-start.png";
-
 
 /**
  * Centralized asset manager for Phaser.
@@ -46,31 +13,31 @@ export class PhaserAssetLoader {
    * Maps logical keys to file paths.
    */
   private static readonly ASSETS = {
-    "tile-background": tileBackground,
-    "winner-panel": winnerPanel,
-    "loser-panel": loserPanel,
-    "button-blue": buttonBlue,
-    "button-orange": buttonOrange,
-    "button-start": buttonStart,
-    "button-start-hover": buttonStartHover,
-    "menu-title-1": menuTitle1,
-    "menu-title-2": menuTitle2,
-    "bomb-idle": bombIdle,
-    "bomb-explosion-1": bombExplosion1,
-    "bomb-explosion-2": bombExplosion2,
-    "grid-cell": gridCell,
-    "grid-block": gridBlock,
-    "grid-border-side": gridBorderSide,
-    "grid-border-corner": gridBorderCorner,
-    "grid-cursor": gridCursor,
-    "grid-cursor-alt": gridCursorAlt,
-    "queue-selected": queueSelected,
-    "queue-corner": queueCorner,
-    "queue-side": queueSide,
-    "pipe-straight": pipeStraight,
-    "pipe-corner": pipeCorner,
-    "pipe-cross": pipeCross,
-    "pipe-start": pipeStart,
+    "tile-background": "assets/tile-background.png",
+    "winner-panel": "assets/ui/winner-panel.png",
+    "loser-panel": "assets/ui/loser-panel.png",
+    "button-blue": "assets/ui/button-blue.png",
+    "button-orange": "assets/ui/button-orange.png",
+    "button-start": "assets/ui/button-start.png",
+    "button-start-hover": "assets/ui/button-start-hover.png",
+    "menu-title-1": "assets/menu/menu-title-1.png",
+    "menu-title-2": "assets/menu/menu-title-2.png",
+    "bomb-idle": "assets/bomb/bomb-idle.png",
+    "bomb-explosion-1": "assets/bomb/bomb-explosion-1.png",
+    "bomb-explosion-2": "assets/bomb/bomb-explosion-2.png",
+    "grid-cell": "assets/grid/grid-background.png",
+    "grid-block": "assets/grid/grid-block.png",
+    "grid-border-side": "assets/grid/grid-border-side.png",
+    "grid-border-corner": "assets/grid/grid-border-corner.png",
+    "grid-cursor": "assets/grid/grid-cursor.png",
+    "grid-cursor-alt": "assets/grid/grid-cursor-alt.png",
+    "queue-selected": "assets/queue/queue-selected.png",
+    "queue-corner": "assets/queue/queue-corner.png",
+    "queue-side": "assets/queue/queue-side.png",
+    "pipe-straight": "assets/pipes/pipe-straight.png",
+    "pipe-corner": "assets/pipes/pipe-corner.png",
+    "pipe-cross": "assets/pipes/pipe-cross.png",
+    "pipe-start": "assets/pipes/pipe-start.png",
   } as const;
 
   constructor(
